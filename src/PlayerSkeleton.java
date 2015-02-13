@@ -1,10 +1,14 @@
+import java.util.Random;
+
 
 public class PlayerSkeleton {
 
 	//implement this function to have a working system
 	public int pickMove(State s, int[][] legalMoves) {
 		
-		return 0;
+		// Just so we can see some action =D
+		Random r = new Random(System.currentTimeMillis());
+		return r.nextInt(7);
 	}
 	
 	public static void main(String[] args) {
