@@ -260,9 +260,12 @@ public class State {
 		
 		label.show();
 		
-		
 	}
 	
+	public void setField(int[][] field) {
+		this.field = field;
+	}
+
 	public static final Color brickCol = Color.gray; 
 	
 	private void drawBrick(int c, int r) {

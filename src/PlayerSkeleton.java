@@ -1,7 +1,4 @@
 import java.util.Random;
-import java.lang.Math;
-
-import com.rits.cloning.Cloner;
 
 public class PlayerSkeleton {
 	// We may want to play the game 10 times to train and then just play once with new weights
@@ -13,14 +10,43 @@ public class PlayerSkeleton {
 	private static int[] curFeatures = new int[NUM_FEATURES];
 	private static int[] moveFeatures = new int[NUM_FEATURES];
 	
-	//TODO: implement this function to have a working system
+	public static void main(String[] args) {
+		initialiseWeights();
+		PlayerSkeleton p = new PlayerSkeleton();
+		
+		// TODO: Implement playing the game TIMES_TO_TRAIN times
+		State s = new State();
+		new TFrame(s);
+		while(!s.hasLost()) {
+			s.makeMove(p.pickMove(s,s.legalMoves()));
+			s.draw();
+			s.drawNext(0,0);
+			try {
+				Thread.sleep(300);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println("You have completed " + s.getRowsCleared() + " rows.");
+	}
+	
+	/**
+	 * Initialise weights to small random doubles first 
+	 */
+	private static void initialiseWeights() {
+		for (int i=0; i<weights.length; i++) {
+			Random rand = new Random();
+			weights[i] = rand.nextDouble();
+		}
+	}
+	
 	public int pickMove(State s, int[][] legalMoves) {
 		int move = 0;
 		
 		curFeatures = getFeatures(s);
 		double curValue = getValueFunction(curFeatures);
 		
-		//move = getMoveWithMaxUtility(s, legalMoves);
+		move = getMoveWithMaxUtility(s, legalMoves);
 		
 		//double moveValue = getValueFunction(moveFeatures);
 		//updateWeights(curValue, moveValue);
@@ -33,17 +59,21 @@ public class PlayerSkeleton {
 		//We should return the index of the move in the legal moves list
 		return move;
 	}
-
+	
+	/**
+	 * Choose the move from list of legalMoves with maximum utility
+	 * @param curState
+	 * @param legalMoves
+	 * @return
+	 */
 	private int getMoveWithMaxUtility(State curState, int[][] legalMoves) {
-		Cloner cloner = new Cloner();
-		State prevState = cloner.deepClone(curState);
-		
+		//TODO: Deep copy the current state so can manipulate independently of the game		
 		int maxUtility = -1;
 		int reward = 0;
 		int moveIndex = -1;
 		
 		for (int i=0; i<legalMoves.length; i++) {
-			State s = cloner.deepClone(prevState);
+			State s = cloneCurState(curState);
 			s.makeMove(i);
 			reward = s.getRowsCleared();
 			
@@ -69,6 +99,11 @@ public class PlayerSkeleton {
 		return moveIndex;
 	}
 
+	private State cloneCurState(State curState) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 	/**
 	 * Update weights via gradient descent
 	 * Compares curFeatures to moveFeatures
@@ -77,25 +112,6 @@ public class PlayerSkeleton {
 		double targetMinusObj = moveValue - curValue;
 		double[] changeInWeights = calculateChangeInWeights(targetMinusObj);
 		updateIndividualWeights(changeInWeights);
-	}
-
-	/*
-	 * Helper methods for update Weights
-	 */
-	private double[] calculateChangeInWeights(double targetMinusObj) {
-		double[] changeInWeights = new double[NUM_FEATURES];
-		
-		for (int i=0; i<changeInWeights.length; i++) {
-			changeInWeights[i] = LEARNING_RATE * targetMinusObj * curFeatures[i];
-		}
-		
-		return changeInWeights;
-	}
-	
-	private void updateIndividualWeights(double[] changeInWeights) {
-		for (int i=0; i<weights.length; i++) {
-			weights[i] += changeInWeights[i];
-		}
 	}
 	
 
@@ -223,35 +239,24 @@ public class PlayerSkeleton {
 		
 		return value;
 	}
-
-	/**
-	 * Initialise weights to small random doubles first 
+	
+	/*
+	 * Helper methods for update Weights
 	 */
-	private static void initialiseWeights() {
-		for (int i=0; i<weights.length; i++) {
-			Random rand = new Random();
-			weights[i] = rand.nextDouble();
-		}
-	}
-
-	public static void main(String[] args) {
-		initialiseWeights();
-		PlayerSkeleton p = new PlayerSkeleton();
+	private double[] calculateChangeInWeights(double targetMinusObj) {
+		double[] changeInWeights = new double[NUM_FEATURES];
 		
-		// TODO: Implement playing the game TIMES_TO_TRAIN times
-		State s = new State();
-		new TFrame(s);
-		while(!s.hasLost()) {
-			s.makeMove(p.pickMove(s,s.legalMoves()));
-			s.draw();
-			s.drawNext(0,0);
-			try {
-				Thread.sleep(300);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+		for (int i=0; i<changeInWeights.length; i++) {
+			changeInWeights[i] = LEARNING_RATE * targetMinusObj * curFeatures[i];
 		}
-		System.out.println("You have completed " + s.getRowsCleared() + " rows.");
+		
+		return changeInWeights;
+	}
+	
+	private void updateIndividualWeights(double[] changeInWeights) {
+		for (int i=0; i<weights.length; i++) {
+			weights[i] += changeInWeights[i];
+		}
 	}
 	
 }
