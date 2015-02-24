@@ -1,20 +1,11 @@
 import java.awt.Color;
 
-
-
-
 public class State {
 	public static final int COLS = 10;
 	public static final int ROWS = 21;
 	public static final int N_PIECES = 7;
 
-	
-
 	public boolean lost = false;
-	
-	
-	
-
 	
 	public TLabel label;
 	
@@ -27,12 +18,9 @@ public class State {
 	//top row+1 of each column
 	//0 means empty
 	private int[] top = new int[COLS];
-	
-	
+		
 	//number of next piece
 	protected int nextPiece;
-	
-	
 	
 	//all legal moves - first index is piece type - then a list of 2-length arrays
 	protected static int[][][] legalMoves = new int[N_PIECES][][];
@@ -110,6 +98,10 @@ public class State {
 	
 	}
 	
+	//constructor
+	public State() {
+		nextPiece = randomPiece();
+	}
 	
 	public int[][] getField() {
 		return field;
@@ -139,7 +131,6 @@ public class State {
         return pTop;
     }
 
-
 	public int getNextPiece() {
 		return nextPiece;
 	}
@@ -156,21 +147,10 @@ public class State {
 		return turn;
 	}
 	
-	
-	
-	//constructor
-	public State() {
-		nextPiece = randomPiece();
-
-	}
-	
 	//random integer, returns 0-6
 	private int randomPiece() {
 		return (int)(Math.random()*N_PIECES);
 	}
-	
-
-
 	
 	//gives legal moves for 
 	public int[][] legalMoves() {
@@ -202,7 +182,6 @@ public class State {
 			lost = true;
 			return false;
 		}
-
 		
 		//for each column in the piece - fill in the appropriate blocks
 		for(int i = 0; i < pWidth[nextPiece][orient]; i++) {
@@ -247,12 +226,9 @@ public class State {
 				}
 			}
 		}
-	
 
 		//pick a new piece
 		nextPiece = randomPiece();
-		
-
 		
 		return true;
 	}
@@ -311,9 +287,6 @@ public class State {
 		label.line(COLS, 0, COLS, ROWS+5);
 	}
 	
-
-	
-
 }
 
 

@@ -1,10 +1,19 @@
+import java.util.Random;
 
 public class PlayerSkeleton {
 
-	//implement this function to have a working system
+	//TODO: implement this function to have a working system
 	public int pickMove(State s, int[][] legalMoves) {
+		int move = 0;
 		
-		return 0;
+		/* Randomly generate an index to use
+		Random rand = new Random();
+		move = rand.nextInt(legalMoves.length);
+		System.out.println(move);
+		*/
+		
+		//We should return the index of the move in the legal moves list
+		return move;
 	}
 	
 	public static void main(String[] args) {
@@ -21,7 +30,7 @@ public class PlayerSkeleton {
 				e.printStackTrace();
 			}
 		}
-		System.out.println("You have completed "+s.getRowsCleared()+" rows.");
+		System.out.println("You have completed " + s.getRowsCleared() + " rows.");
 	}
 	
 }

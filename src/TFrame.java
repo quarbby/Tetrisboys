@@ -8,8 +8,6 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 
-
-
 public class TFrame extends JFrame implements KeyListener{
 	private static final long serialVersionUID = 1L;
 	public TLabel label = new TLabel(300,700);
@@ -110,9 +108,6 @@ public class TFrame extends JFrame implements KeyListener{
 				System.out.println("unknown mode");
 				break;
 		}
-		
-		
-		
 		
 	}
 
