@@ -13,19 +13,34 @@ public class PlayerSkeleton {
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
 	private static double[] weights = new double[NUM_FEATURES];
+	private static double hiddenNodeWeight = 0.3;
+	
+	private static double curValue = 0.0;
+	private static double outputValue = 0.0;
+	private static double hiddenNodeValue = 0.0;
+	
 	private static int[] curFeatures = new int[NUM_FEATURES];
 	private static int[] moveFeatures = new int[NUM_FEATURES];
+	
+	// Temp var to toggle between neural and gradient descent for now. 
+	// Eventually should switch to neural when it's working
+	private static boolean isNeural = false; 	
 	
 	public static void main(String[] args) {
 		initialiseWeights();
 		PlayerSkeleton p = new PlayerSkeleton();
+		isNeural = false;
 		
 		// TODO: Is there a way not to pop up so many TFrames? 
 		for (int i=0; i<TIMES_TO_TRAIN; i++) {
 			State s = new State();
 			new TFrame(s);
 			while(!s.hasLost()) {
-				s.makeMove(p.pickMove(s,s.legalMoves()));
+				if (isNeural) {
+					s.makeMove(p.pickMoveNeuralNet(s,s.legalMoves()));
+				} else {
+					s.makeMove(p.pickMove(s,s.legalMoves()));
+				}
 				s.draw();
 				s.drawNext(0,0);
 				try {
@@ -44,20 +59,22 @@ public class PlayerSkeleton {
 	 * Reads from weights file 
 	 */
 	private static void initialiseWeights() {
-		int i=0;
-		try { 
-		BufferedReader br = new BufferedReader(new FileReader(WEIGHTS_FILE));
 		try {
-			String line = br.readLine();
+			BufferedReader br = new BufferedReader(new FileReader(WEIGHTS_FILE));
 			
-			while (line != null) {
-				weights[i] = Double.parseDouble(line.trim());
+			String line = null;
+			for (int i=0; i<weights.length; i++) {
 				line = br.readLine();
-				i++;
+				weights[i] = Double.parseDouble(line.trim());
 			}
-		} finally {
+			
+			// Last weight is neural weight if neural
+			if (isNeural) {
+				line = br.readLine();
+				hiddenNodeWeight = Double.parseDouble(line.trim());
+			}
+			
 			br.close();
-		}
 		} catch (IOException e) {
 			generateRandomWeights();
 		}
@@ -83,12 +100,12 @@ public class PlayerSkeleton {
 		int move = 0;
 		
 		curFeatures = getFeatures(s);
-		double curValue = getValueFunction(curFeatures);
+		curValue = getValueFunction(curFeatures);
 		
 		move = getMoveWithMaxUtility(s, legalMoves);
 		
-		double moveValue = getValueFunction(moveFeatures);
-		updateWeights(curValue, moveValue);
+		outputValue = getValueFunction(moveFeatures);
+		updateWeights(curValue, outputValue);
 		
 		/*
 		Random rand = new Random();
@@ -98,6 +115,26 @@ public class PlayerSkeleton {
 		return move;
 	}
 	
+	/**
+	 * For using neural network with 1 hidden node and sigmoid function to pick move
+	 * @param s
+	 * @param legalMoves
+	 * @return
+	 */
+	public int pickMoveNeuralNet(State s, int[][] legalMoves) {
+		int move = 0;
+		
+		curFeatures = getFeatures(s);
+		curValue = getValueFunctionNeural(curFeatures);
+		
+		outputValue = getValueFunctionNeural(moveFeatures);
+		updateWeightsNeural();
+		
+		return move; 
+	}
+	
+
+
 	/**
 	 * Choose the move from list of legalMoves with maximum utility
 	 * @param curState
@@ -151,6 +188,9 @@ public class PlayerSkeleton {
 		updateIndividualWeights(changeInWeights);
 	}
 	
+    //================================================================================
+    // Get Features of Board and Helper Methods
+    //================================================================================
 
 	/**
 	 * To get the features as defined in project handout
@@ -183,10 +223,6 @@ public class PlayerSkeleton {
 		
 		return features;
 	}
-
-	/*
-	 * Helper methods for getFeatures
-	 */
 	
 	private int getMaxHeight(int[] colHeights) {
 		int max = -1;
@@ -281,9 +317,9 @@ public class PlayerSkeleton {
 		return value;
 	}
 	
-	/*
-	 * Helper methods for file I/O
-	 */
+    //================================================================================
+    // Helper methods for file I/O
+    //================================================================================
 	
 	private static void generateRandomWeights() {
 		for (int i=0; i<weights.length; i++) {
@@ -303,12 +339,70 @@ public class PlayerSkeleton {
 			weightString = weightString + weights[i] + "\n";
 		}
 		
+		weightString += hiddenNodeWeight;
+		
 		return weightString;
 	}
 	
-	/*
-	 * Helper methods for update Weights
-	 */
+    //================================================================================
+    // Helper Methods for Picking Move with Neural Network
+    //================================================================================
+	
+	private double getValueFunctionNeural(int[] features) {
+		double value = 0.0;
+		
+		double hiddenNodeVal = calculateWeightedSum(features);
+		double sigmoidSum = calculateSigmoid(hiddenNodeVal);
+		
+		value = calculateSigmoid(sigmoidSum * hiddenNodeWeight);
+		
+		return value;
+	}
+
+	private double calculateWeightedSum(int[] features) {
+		double sum = 0.0;
+		
+		for (int i=0; i<weights.length; i++) {
+			sum += weights[i] * features[i];
+		}
+		
+		return sum;
+	}
+	
+	private double calculateSigmoid(double value) {
+		return 1/(1+Math.pow(Math.E, -value));
+	}
+
+	private void updateWeightsNeural() {
+		double deltaOutput = outputValue*(1-outputValue)*(curValue-outputValue);
+		updateHiddenNodeWeight(deltaOutput); 
+		
+		//TODO: Check formula for deltaHidden
+		double deltaHidden = hiddenNodeValue*(1-hiddenNodeValue)*(hiddenNodeWeight*outputValue);
+		double[] changeInWeights = calculateChangeInWeightsNeural(deltaHidden);
+		updateIndividualWeights(changeInWeights);
+		
+	}
+
+	private void updateHiddenNodeWeight(double deltaOutput) {
+		double changeInWeight = LEARNING_RATE * deltaOutput * hiddenNodeValue;
+		hiddenNodeWeight = hiddenNodeWeight + changeInWeight;
+	}
+	
+	private double[] calculateChangeInWeightsNeural(double deltaHidden) {
+		double[] changeInWeights = new double[NUM_FEATURES];
+		
+		for (int i=0; i<NUM_FEATURES; i++) {
+			changeInWeights[i] = LEARNING_RATE * deltaHidden * curFeatures[i];
+		}
+		
+		return changeInWeights;
+	}
+
+    //================================================================================
+    // Helper Methods for Update Weights
+    //================================================================================
+	
 	private double[] calculateChangeInWeights(double targetMinusObj) {
 		double[] changeInWeights = new double[NUM_FEATURES];
 		
