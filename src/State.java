@@ -103,6 +103,11 @@ public class State {
 		nextPiece = randomPiece();
 	}
 	
+	public State(int[][] field, int nextPiece) {
+		setField(field);
+		this.nextPiece = nextPiece;
+	}
+	
 	public int[][] getField() {
 		return field;
 	}
@@ -145,6 +150,10 @@ public class State {
 	
 	public int getTurnNumber() {
 		return turn;
+	}
+	
+	public void setField(int[][] field) {
+		this.field = field;
 	}
 	
 	//random integer, returns 0-6
@@ -260,10 +269,6 @@ public class State {
 		
 		label.show();
 		
-	}
-	
-	public void setField(int[][] field) {
-		this.field = field;
 	}
 
 	public static final Color brickCol = Color.gray; 

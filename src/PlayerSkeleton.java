@@ -1,10 +1,16 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Random;
 
 public class PlayerSkeleton {
-	// We may want to play the game 10 times to train and then just play once with new weights
-	private static final int TIMES_TO_TRAIN = 10;	
+	private static final int TIMES_TO_TRAIN = 3;	
 	private static final int NUM_FEATURES = 22;
 	private static final double LEARNING_RATE = 0.1;
+	private static final String WEIGHTS_FILE = "weights.txt";
 	
 	private static double[] weights = new double[NUM_FEATURES];
 	private static int[] curFeatures = new int[NUM_FEATURES];
@@ -14,32 +20,65 @@ public class PlayerSkeleton {
 		initialiseWeights();
 		PlayerSkeleton p = new PlayerSkeleton();
 		
-		// TODO: Implement playing the game TIMES_TO_TRAIN times
-		State s = new State();
-		new TFrame(s);
-		while(!s.hasLost()) {
-			s.makeMove(p.pickMove(s,s.legalMoves()));
-			s.draw();
-			s.drawNext(0,0);
-			try {
-				Thread.sleep(300);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+		// TODO: Is there a way not to pop up so many TFrames? 
+		for (int i=0; i<TIMES_TO_TRAIN; i++) {
+			State s = new State();
+			new TFrame(s);
+			while(!s.hasLost()) {
+				s.makeMove(p.pickMove(s,s.legalMoves()));
+				s.draw();
+				s.drawNext(0,0);
+				try {
+					Thread.sleep(300);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
+			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
 		}
-		System.out.println("You have completed " + s.getRowsCleared() + " rows.");
+		
+		saveWeights();
 	}
-	
+
 	/**
-	 * Initialise weights to small random doubles first 
+	 * Reads from weights file 
 	 */
 	private static void initialiseWeights() {
-		for (int i=0; i<weights.length; i++) {
-			Random rand = new Random();
-			weights[i] = rand.nextDouble();
+		int i=0;
+		try { 
+		BufferedReader br = new BufferedReader(new FileReader(WEIGHTS_FILE));
+		try {
+			String line = br.readLine();
+			
+			while (line != null) {
+				weights[i] = Double.parseDouble(line.trim());
+				line = br.readLine();
+				i++;
+			}
+		} finally {
+			br.close();
+		}
+		} catch (IOException e) {
+			generateRandomWeights();
+		}
+	}
+
+	/**
+	 * Save weights to file to use again
+	 */
+	private static void saveWeights() {
+		String weightsString = getWeightsString();
+		try{
+			File file = new File(WEIGHTS_FILE);
+			BufferedWriter output = new BufferedWriter(new FileWriter(file));
+			output.write(weightsString);
+			output.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	
+
 	public int pickMove(State s, int[][] legalMoves) {
 		int move = 0;
 		
@@ -48,15 +87,14 @@ public class PlayerSkeleton {
 		
 		move = getMoveWithMaxUtility(s, legalMoves);
 		
-		//double moveValue = getValueFunction(moveFeatures);
-		//updateWeights(curValue, moveValue);
+		double moveValue = getValueFunction(moveFeatures);
+		updateWeights(curValue, moveValue);
 		
 		/*
 		Random rand = new Random();
 		move = rand.nextInt(legalMoves.length);
 		*/
-		
-		//We should return the index of the move in the legal moves list
+
 		return move;
 	}
 	
@@ -67,8 +105,7 @@ public class PlayerSkeleton {
 	 * @return
 	 */
 	private int getMoveWithMaxUtility(State curState, int[][] legalMoves) {
-		//TODO: Deep copy the current state so can manipulate independently of the game		
-		int maxUtility = -1;
+		double maxUtility = -1.0;
 		int reward = 0;
 		int moveIndex = -1;
 		
@@ -79,16 +116,16 @@ public class PlayerSkeleton {
 			
 			int[] features = getFeatures(s);
 			double moveValue = getValueFunction(features);
-			
 			double utility = reward + moveValue;
 			
 			// Find the move with highest utility
 			if (utility > maxUtility) {
 				moveIndex = i;
 				moveFeatures = features;
+				maxUtility = utility;
 			}
 		}
-		
+						
 		// No valid move, play a random move
 		// TODO: search further down the tree
 		if (moveIndex < 0) {
@@ -100,8 +137,8 @@ public class PlayerSkeleton {
 	}
 
 	private State cloneCurState(State curState) {
-		// TODO Auto-generated method stub
-		return null;
+		State s = new State(curState.getField(), curState.getNextPiece());
+		return s;
 	}
 
 	/**
@@ -147,6 +184,10 @@ public class PlayerSkeleton {
 		return features;
 	}
 
+	/*
+	 * Helper methods for getFeatures
+	 */
+	
 	private int getMaxHeight(int[] colHeights) {
 		int max = -1;
 		
@@ -238,6 +279,31 @@ public class PlayerSkeleton {
 		}
 		
 		return value;
+	}
+	
+	/*
+	 * Helper methods for file I/O
+	 */
+	
+	private static void generateRandomWeights() {
+		for (int i=0; i<weights.length; i++) {
+			weights[i] = getRandomDouble();
+		}		
+	}
+	
+	private static double getRandomDouble() {
+		Random rand = new Random();
+		return rand.nextDouble();
+	}
+	
+	private static String getWeightsString() {
+		String weightString = null;
+		
+		for (int i=0; i<weights.length; i++) {
+			weightString = weightString + weights[i] + "\n";
+		}
+		
+		return weightString;
 	}
 	
 	/*
