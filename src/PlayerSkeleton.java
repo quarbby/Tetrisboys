@@ -121,8 +121,9 @@ public class PlayerSkeleton {
 		
 		curFeatures = getFeatures(s);
 		curValue = getValueFunctionNeural(curFeatures);
-		
+		move = getMoveWithMaxUtility(s, legalMoves);
 		outputValue = getValueFunctionNeural(moveFeatures);
+		
 		updateWeightsNeural();
 				
 		return move; 
@@ -145,7 +146,13 @@ public class PlayerSkeleton {
 			reward = s.getRowsCleared();
 			
 			int[] features = getFeatures(s);
-			double moveValue = getValueFunction(features);
+			double moveValue = 0.0;
+			if (isNeural) {
+				moveValue = getValueFunctionNeural(features);
+			} else {
+				moveValue = getValueFunction(features);
+			}
+			
 			double utility = reward + moveValue;
 			
 			// Find the move with highest utility
