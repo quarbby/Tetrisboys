@@ -103,9 +103,10 @@ public class State {
 		nextPiece = randomPiece();
 	}
 	
-	public State(int[][] field, int nextPiece) {
+	public State(int[][] field, int nextPiece, int[] top) {
 		setField(field);
 		this.nextPiece = nextPiece;
+		this.top = top;
 	}
 	
 	public int[][] getField() {

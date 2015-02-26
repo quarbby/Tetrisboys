@@ -17,7 +17,7 @@ public class PlayerSkeleton {
 	
 	private static double curValue = 0.0;
 	private static double outputValue = 0.0;
-	private static double hiddenNodeValue = 0.0;
+	private static double hiddenNodeValue = 0.3;
 	
 	private static int[] curFeatures = new int[NUM_FEATURES];
 	private static int[] moveFeatures = new int[NUM_FEATURES];
@@ -29,9 +29,8 @@ public class PlayerSkeleton {
 	public static void main(String[] args) {
 		initialiseWeights();
 		PlayerSkeleton p = new PlayerSkeleton();
-		isNeural = false;
+		isNeural = true;
 		
-		// TODO: Is there a way not to pop up so many TFrames? 
 		for (int i=0; i<TIMES_TO_TRAIN; i++) {
 			State s = new State();
 			new TFrame(s);
@@ -41,8 +40,10 @@ public class PlayerSkeleton {
 				} else {
 					s.makeMove(p.pickMove(s,s.legalMoves()));
 				}
+				
 				s.draw();
 				s.drawNext(0,0);
+				
 				try {
 					Thread.sleep(300);
 				} catch (InterruptedException e) {
@@ -51,7 +52,7 @@ public class PlayerSkeleton {
 			}
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
 		}
-		
+				
 		saveWeights();
 	}
 
@@ -63,15 +64,15 @@ public class PlayerSkeleton {
 			BufferedReader br = new BufferedReader(new FileReader(WEIGHTS_FILE));
 			
 			String line = null;
-			for (int i=0; i<weights.length; i++) {
-				line = br.readLine();
-				weights[i] = Double.parseDouble(line.trim());
-			}
-			
-			// Last weight is neural weight if neural
-			if (isNeural) {
-				line = br.readLine();
-				hiddenNodeWeight = Double.parseDouble(line.trim());
+			while ((line = br.readLine()) != null) {
+				for (int i=0; i<weights.length; i++) {
+					weights[i] = Double.parseDouble(line.trim());
+				}
+				
+				// Last weight is neural weight if neural
+				if (isNeural) {
+					hiddenNodeWeight = Double.parseDouble(line.trim());
+				}
 			}
 			
 			br.close();
@@ -94,7 +95,6 @@ public class PlayerSkeleton {
 			e.printStackTrace();
 		}
 	}
-	
 
 	public int pickMove(State s, int[][] legalMoves) {
 		int move = 0;
@@ -106,11 +106,6 @@ public class PlayerSkeleton {
 		
 		outputValue = getValueFunction(moveFeatures);
 		updateWeights(curValue, outputValue);
-		
-		/*
-		Random rand = new Random();
-		move = rand.nextInt(legalMoves.length);
-		*/
 
 		return move;
 	}
@@ -129,12 +124,10 @@ public class PlayerSkeleton {
 		
 		outputValue = getValueFunctionNeural(moveFeatures);
 		updateWeightsNeural();
-		
+				
 		return move; 
 	}
 	
-
-
 	/**
 	 * Choose the move from list of legalMoves with maximum utility
 	 * @param curState
@@ -166,15 +159,14 @@ public class PlayerSkeleton {
 		// No valid move, play a random move
 		// TODO: search further down the tree
 		if (moveIndex < 0) {
-			Random rand = new Random();
-			moveIndex = rand.nextInt(legalMoves.length);
+			moveIndex = getRandomInteger(legalMoves.length);
 		}
 		
 		return moveIndex;
 	}
 
 	private State cloneCurState(State curState) {
-		State s = new State(curState.getField(), curState.getNextPiece());
+		State s = new State(curState.getField(), curState.getNextPiece(), curState.getTop());
 		return s;
 	}
 
@@ -185,6 +177,7 @@ public class PlayerSkeleton {
 	private void updateWeights(double curValue, double moveValue) {
 		double targetMinusObj = moveValue - curValue;
 		double[] changeInWeights = calculateChangeInWeights(targetMinusObj);
+		
 		updateIndividualWeights(changeInWeights);
 	}
 	
@@ -199,7 +192,8 @@ public class PlayerSkeleton {
 	 */
 	private int[] getFeatures(State s) {
 		int[] features = new int[NUM_FEATURES];
-		features[0] = 1;	// First feature is always 1
+		// First feature is always 1
+		features[0] = 1;	
 		
 		int[] colHeights = s.getTop();
 		
@@ -254,7 +248,6 @@ public class PlayerSkeleton {
 				}
 			}
 		}
-		
 		
 		return numHoles;
 	}
@@ -327,13 +320,8 @@ public class PlayerSkeleton {
 		}		
 	}
 	
-	private static double getRandomDouble() {
-		Random rand = new Random();
-		return rand.nextDouble();
-	}
-	
 	private static String getWeightsString() {
-		String weightString = null;
+		String weightString = "";
 		
 		for (int i=0; i<weights.length; i++) {
 			weightString = weightString + weights[i] + "\n";
@@ -394,6 +382,7 @@ public class PlayerSkeleton {
 		
 		for (int i=0; i<NUM_FEATURES; i++) {
 			changeInWeights[i] = LEARNING_RATE * deltaHidden * curFeatures[i];
+			
 		}
 		
 		return changeInWeights;
@@ -419,4 +408,17 @@ public class PlayerSkeleton {
 		}
 	}
 	
+    //================================================================================
+    // Other General Helper Methods 
+    //================================================================================
+	
+	private static double getRandomDouble() {
+		Random rand = new Random();
+		return rand.nextDouble();
+	}
+	
+	private static int getRandomInteger(int max) {
+		Random rand = new Random();
+		return rand.nextInt(max);
+	}
 }
