@@ -1,20 +1,11 @@
 import java.awt.Color;
 
-
-
-
 public class State {
 	public static final int COLS = 10;
 	public static final int ROWS = 21;
 	public static final int N_PIECES = 7;
 
-	
-
 	public boolean lost = false;
-	
-	
-	
-
 	
 	public TLabel label;
 	
@@ -27,12 +18,9 @@ public class State {
 	//top row+1 of each column
 	//0 means empty
 	private int[] top = new int[COLS];
-	
-	
+		
 	//number of next piece
 	protected int nextPiece;
-	
-	
 	
 	//all legal moves - first index is piece type - then a list of 2-length arrays
 	protected static int[][][] legalMoves = new int[N_PIECES][][];
@@ -110,6 +98,26 @@ public class State {
 	
 	}
 	
+	//constructor
+	public State() {
+		nextPiece = randomPiece();
+	}
+	
+	public State(int[][] newField, int newNextPiece, int[] newTop) {
+		// http://stackoverflow.com/questions/1564832/how-do-i-do-a-deep-copy-of-a-2d-array-in-java
+		// only way to do a deep copy is to iterate through the array and copy each element
+		for (int i = 0; i < newField.length; i++){
+			for (int j  = 0; j < newField[i].length; j++){
+				this.field[i][j] = newField[i][j];
+			}
+		}
+
+		this.nextPiece = newNextPiece;
+				
+		for (int i = 0; i < newTop.length; i++){
+			this.top[i] = newTop[i];
+		}
+	}
 	
 	public int[][] getField() {
 		return field;
@@ -139,7 +147,6 @@ public class State {
         return pTop;
     }
 
-
 	public int getNextPiece() {
 		return nextPiece;
 	}
@@ -156,21 +163,14 @@ public class State {
 		return turn;
 	}
 	
-	
-	
-	//constructor
-	public State() {
-		nextPiece = randomPiece();
-
+	public void setField(int[][] field) {
+		this.field = field.clone();
 	}
 	
 	//random integer, returns 0-6
 	private int randomPiece() {
 		return (int)(Math.random()*N_PIECES);
 	}
-	
-
-
 	
 	//gives legal moves for 
 	public int[][] legalMoves() {
@@ -202,7 +202,6 @@ public class State {
 			lost = true;
 			return false;
 		}
-
 		
 		//for each column in the piece - fill in the appropriate blocks
 		for(int i = 0; i < pWidth[nextPiece][orient]; i++) {
@@ -247,12 +246,9 @@ public class State {
 				}
 			}
 		}
-	
 
 		//pick a new piece
 		nextPiece = randomPiece();
-		
-
 		
 		return true;
 	}
@@ -284,9 +280,8 @@ public class State {
 		
 		label.show();
 		
-		
 	}
-	
+
 	public static final Color brickCol = Color.gray; 
 	
 	private void drawBrick(int c, int r) {
@@ -311,9 +306,6 @@ public class State {
 		label.line(COLS, 0, COLS, ROWS+5);
 	}
 	
-
-	
-
 }
 
 
