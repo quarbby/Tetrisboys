@@ -369,11 +369,11 @@ public class PlayerSkeleton {
 	}
 
 	private void updateWeightsNeural() {
-		double deltaOutput = outputValue*(1-outputValue)*(curValue-outputValue);
+		double deltaOutput = outputValue*(1-outputValue)*(outputValue-curValue);
 		updateHiddenNodeWeight(deltaOutput); 
 		
 		//TODO: Check formula for deltaHidden
-		double deltaHidden = hiddenNodeValue*(1-hiddenNodeValue)*(hiddenNodeWeight*outputValue);
+		double deltaHidden = hiddenNodeValue*(1-hiddenNodeValue)*(hiddenNodeWeight*deltaOutput);
 		double[] changeInWeights = calculateChangeInWeightsNeural(deltaHidden);
 		updateIndividualWeights(changeInWeights);
 		
