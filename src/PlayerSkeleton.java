@@ -7,9 +7,9 @@ import java.io.IOException;
 import java.util.Random;
 
 public class PlayerSkeleton {
-	private static final int TIMES_TO_TRAIN = 30;	
-	private static final int NUM_FEATURES = 22;
-	private static final double LEARNING_RATE = 0.1;
+	private static final int TIMES_TO_TRAIN = 10;	
+	private static final int NUM_FEATURES = 23;
+	private static final double LEARNING_RATE = 0.2;
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
 	private static double[] weights = new double[NUM_FEATURES];
@@ -49,11 +49,15 @@ public class PlayerSkeleton {
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
+								
 			}
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
+						
 		}
-				
+		
 		saveWeights();
+		
+				
 	}
 
 	/**
@@ -156,7 +160,7 @@ public class PlayerSkeleton {
 			double utility = reward + moveValue;
 			
 			// Find the move with highest utility
-			if (utility > maxUtility) {
+			if (utility < maxUtility) {
 				moveIndex = i;
 				moveFeatures = features;
 				maxUtility = utility;
@@ -200,6 +204,7 @@ public class PlayerSkeleton {
 	private int[] getFeatures(State s) {
 		int[] features = new int[NUM_FEATURES];
 		// First feature is always 1
+
 		features[0] = 1;	
 		
 		int[] colHeights = s.getTop();
@@ -207,20 +212,28 @@ public class PlayerSkeleton {
 		// Features indexed 1 to 10 are 10 column heights of wall
 		for (int i=1; i<=colHeights.length; i++) {
 			features[i] = colHeights[i-1];
+			
 		}
 		
 		// Features indexed 11 to 19 are absolute difference between adjacent col heights
 		int j = 11;
 		for (int i=1; i<=colHeights.length-1; i++) {
-			features[j] = colHeights[i] - colHeights[i-1];
+
+			features[j] = Math.abs(colHeights[i] - colHeights[i-1]);
 			j++;
+			
 		}
 		
 		// Feature 20 is maximum column height
 		features[20] = getMaxHeight(colHeights);
 		
 		// Feature 21 is number of holes in wall 
+
 		features[21] = getNumHoles(s);
+
+		
+		// Feature 22 is square of diff in adjacent heights
+		features[22] = adjacentHeightDifferenceSquare(s);
 		
 		return features;
 	}
@@ -315,6 +328,22 @@ public class PlayerSkeleton {
 		}
 		
 		return value;
+	}
+	
+	private int adjacentHeightDifferenceSquare(State s){
+		
+		int sum = 0;
+		
+		int[] colHeights = s.getTop();
+		
+		// Features indexed 1 to 10 are 10 column heights of wall
+		for (int i = 0; i < colHeights.length - 1; i++) {
+			sum = sum + (int) Math.pow(colHeights[i] - colHeights[i + 1], 2);
+		}
+		
+		sum = (int) Math.pow(sum, 0.5);
+		
+		return sum;
 	}
 	
     //================================================================================
