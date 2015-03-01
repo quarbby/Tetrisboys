@@ -21,6 +21,11 @@ public class TFrame extends JFrame implements KeyListener{
 	public int mode = MANUAL;
 	
 	//constructor
+	public TFrame (State s, String title) {
+		this(s);
+		setTitle(title);
+	}
+	
 	public TFrame (State s){
 		this.s = s;
 		s.label = label;

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Random;
 
 public class PlayerSkeleton {
@@ -31,26 +32,30 @@ public class PlayerSkeleton {
 		PlayerSkeleton p = new PlayerSkeleton();
 		isNeural = true;
 		
-		for (int i=0; i<TIMES_TO_TRAIN; i++) {
+		for (int i=0; i < TIMES_TO_TRAIN; i++) {
 			State s = new State();
-			new TFrame(s);
+			TFrame tf = new TFrame(s);
 			while(!s.hasLost()) {
+				int chosenMove;
 				if (isNeural) {
-					s.makeMove(p.pickMoveNeuralNet(s,s.legalMoves()));
+					chosenMove = p.pickMoveNeuralNet(s,s.legalMoves());
 				} else {
-					s.makeMove(p.pickMove(s,s.legalMoves()));
+					chosenMove = p.pickMove(s,s.legalMoves());
 				}
 				
+				s.makeMove(chosenMove);
 				s.draw();
 				s.drawNext(0,0);
 				
 				try {
-					Thread.sleep(300);
+					Thread.sleep(1000);
+					System.out.println("main sleeping");
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
+			tf.dispose();
 		}
 				
 		saveWeights();
@@ -140,18 +145,65 @@ public class PlayerSkeleton {
 		int reward = 0;
 		int moveIndex = -1;
 		
+		// store the generated tframes, so that we can destroy
+		// them later.
+		ArrayList<TFrame> tfList = new ArrayList<TFrame>();
+		
 		for (int i=0; i<legalMoves.length; i++) {
-			State s = cloneCurState(curState);
-			s.makeMove(i);
-			reward = s.getRowsCleared();
+			State testState = cloneCurState(curState);
 			
-			int[] features = getFeatures(s);
+			// TODO remove this chunk below before submission
+			TFrame testTf = new TFrame(testState, "test " + i);
+			tfList.add(testTf);
+			testState.makeMove(i);
+			testState.draw();
+			testState.drawNext(0,0);
+			// TODO remove this chunk above before submission
+			
+			// and uncomment this statement below
+			// testState.makeMove(i);
+			reward = testState.getRowsCleared();
+			
+			// just for debugging
+			if (reward > 0) {
+				System.out.println("reward for move" + i + " = " + reward);
+			}
+			
+			int[] features = getFeatures(testState);
 			double moveValue = 0.0;
 			if (isNeural) {
 				moveValue = getValueFunctionNeural(features);
 			} else {
 				moveValue = getValueFunction(features);
 			}
+			
+			/**
+			 read this for thought process lol 
+			 
+			 hmmm, the test state is not recreated properly.
+			 the state for the next i value has the move history
+			 of the previous i values.
+			
+			 the legalMoves array in State is static. is this why?
+			 when we make a move, we essentially update the 
+			 legalMoves array across all states. so the moves
+			 wont be what we think they are.
+			
+			 not only that. the game state of State itself is 
+			 static. so even though we clone State, we still 
+			 modify the real game state by testing our moves.
+			
+			 we need to find some way to test the moves without
+			 modifying the real game state.
+			*/
+			
+			/**
+			 * CONCLUSION:
+			 * we cannot simply clone the state like we are doing
+			 * now. the testing moves won't work like that. we will
+			 * need to ensure that we test on a separate gamestate.
+			 * 
+			 */
 			
 			double utility = reward + moveValue;
 			
@@ -161,6 +213,22 @@ public class PlayerSkeleton {
 				moveFeatures = features;
 				maxUtility = utility;
 			}
+			
+			// to see the move progression clearly
+			try {
+				Thread.sleep(1000);
+				System.out.println("test sleeping");
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+			// only allow max 5 tframes on the screen
+			if (i % 5 == 0) {
+				for (TFrame t : tfList) {
+					t.dispose();
+				}
+				tfList.clear();
+			}
 		}
 						
 		// No valid move, play a random move
@@ -168,6 +236,8 @@ public class PlayerSkeleton {
 		if (moveIndex < 0) {
 			moveIndex = getRandomInteger(legalMoves.length);
 		}
+		
+		System.out.println("chosen move = " + moveIndex);
 		
 		return moveIndex;
 	}
