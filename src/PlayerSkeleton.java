@@ -4,14 +4,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
 public class PlayerSkeleton {
 	private static final int TIMES_TO_TRAIN = 30;	
 	private static final int NUM_FEATURES = 22;
-	private static final double LEARNING_RATE = -0.1;
+	private static final double LEARNING_RATE = 0.1;
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
 	private static double[] weights = new double[NUM_FEATURES];
@@ -26,7 +25,7 @@ public class PlayerSkeleton {
 	
 	// Temp var to toggle between neural and gradient descent for now. 
 	// Eventually should switch to neural when it's working
-	private static boolean isNeural = false; 	
+	private static boolean isNeural = true; 	
 	
 	public static void main(String[] args) {
 		initialiseWeights();
@@ -52,7 +51,7 @@ public class PlayerSkeleton {
 				
 				try {
 					System.out.println("preparing for next move...");
-					Thread.sleep(1000);
+					Thread.sleep(100);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
@@ -61,7 +60,7 @@ public class PlayerSkeleton {
 			tf.dispose();
 			System.out.println("game " + (i+1) + " completed!");
 			try {
-				Thread.sleep(3000);
+				Thread.sleep(500);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -77,16 +76,19 @@ public class PlayerSkeleton {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(WEIGHTS_FILE));
 			
-			String line = null;
-			while ((line = br.readLine()) != null) {
-				for (int i=0; i<weights.length; i++) {
+			String line = br.readLine();
+			int i = 0;
+			while (line != null) {
+				// Last weight is neural weight if neural
+				if (i >= weights.length) {
+					if (isNeural) {
+						hiddenNodeWeight = Double.parseDouble(line.trim());
+					}
+				} else {
 					weights[i] = Double.parseDouble(line.trim());
 				}
-				
-				// Last weight is neural weight if neural
-				if (isNeural) {
-					hiddenNodeWeight = Double.parseDouble(line.trim());
-				}
+				i++;
+				line = br.readLine();
 			}
 			
 			br.close();
@@ -454,7 +456,10 @@ public class PlayerSkeleton {
 		//TODO: Check formula for deltaHidden
 		double deltaHidden = hiddenNodeValue*(1-hiddenNodeValue)*(hiddenNodeWeight*deltaOutput);
 		double[] changeInWeights = calculateChangeInWeightsNeural(deltaHidden);
+		//updateIndividualWeights(changeInWeights);
+		System.out.println("change in weights:\n" + Arrays.toString(changeInWeights));
 		updateIndividualWeights(changeInWeights);
+		System.out.println("updated weights:\n" + Arrays.toString(weights));
 		
 	}
 
