@@ -7,9 +7,9 @@ import java.io.IOException;
 import java.util.Random;
 
 public class PlayerSkeleton {
-	private static final int TIMES_TO_TRAIN = 10;	
-	private static final int NUM_FEATURES = 23;
-	private static final double LEARNING_RATE = 0.2;
+	private static final int TIMES_TO_TRAIN = 30;	
+	private static final int NUM_FEATURES = 5;
+	private static final double LEARNING_RATE = 0.1;
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
 	private static double[] weights = new double[NUM_FEATURES];
@@ -19,8 +19,8 @@ public class PlayerSkeleton {
 	private static double outputValue = 0.0;
 	private static double hiddenNodeValue = 0.3;
 	
-	private static int[] curFeatures = new int[NUM_FEATURES];
-	private static int[] moveFeatures = new int[NUM_FEATURES];
+	private static double[] curFeatures = new double[NUM_FEATURES];
+	private static double[] moveFeatures = new double[NUM_FEATURES];
 	
 	// Temp var to toggle between neural and gradient descent for now. 
 	// Eventually should switch to neural when it's working
@@ -45,19 +45,16 @@ public class PlayerSkeleton {
 				s.drawNext(0,0);
 				
 				try {
-					Thread.sleep(300);
+					//Thread.sleep(300);
+					Thread.sleep(5);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
-								
 			}
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
-						
 		}
-		
-		saveWeights();
-		
 				
+		saveWeights();
 	}
 
 	/**
@@ -144,12 +141,14 @@ public class PlayerSkeleton {
 		int reward = 0;
 		int moveIndex = -1;
 		
+		int max_row = 0;
+		
 		for (int i=0; i<legalMoves.length; i++) {
 			State s = cloneCurState(curState);
 			s.makeMove(i);
 			reward = s.getRowsCleared();
 			
-			int[] features = getFeatures(s);
+			double[] features = getFeatures(s);
 			double moveValue = 0.0;
 			if (isNeural) {
 				moveValue = getValueFunctionNeural(features);
@@ -157,13 +156,47 @@ public class PlayerSkeleton {
 				moveValue = getValueFunction(features);
 			}
 			
-			double utility = reward + moveValue;
+			NewState original = convertState(s);
 			
+			int[][][] allLegalMoves = original.allLegalMoves();
+			
+			int[][] s_field = s.getField();
+			int s_nextPiece = s.getNextPiece();
+			int s_top[] = s.getTop();	
+			int s_turn = s.getTurnNumber();
+
+			int next_reward = 0;
+
+			for (int j = 0; j < 7; j++){
+				for (int o = 0; o < allLegalMoves[j].length; o++){
+
+					NewState second_state = new NewState(s_field, j, s_top, s_turn);
+					
+					second_state.newMove(o);	
+					
+					if (next_reward < second_state.getRowsCleared()){
+						next_reward = second_state.getRowsCleared();
+					}
+				}
+			}	
+			
+			double utility = moveValue;
+			
+			reward = reward + next_reward;
+						
 			// Find the move with highest utility
-			if (utility < maxUtility) {
+
+			if (reward > max_row){
+				max_row = reward;
 				moveIndex = i;
-				moveFeatures = features;
 				maxUtility = utility;
+				
+			} else if (max_row == reward) {
+				if (utility > maxUtility) {
+					moveIndex = i;
+					moveFeatures = features;
+					maxUtility = utility;
+				}
 			}
 		}
 						
@@ -174,6 +207,12 @@ public class PlayerSkeleton {
 		}
 		
 		return moveIndex;
+	}
+
+
+	private NewState convertState(State curState) {
+		NewState s = new NewState(curState.getField(), curState.getNextPiece(), curState.getTop(), curState.getTurnNumber());
+		return s;
 	}
 
 	private State cloneCurState(State curState) {
@@ -201,44 +240,98 @@ public class PlayerSkeleton {
 	 * @param s
 	 * @return array of features 
 	 */
-	private int[] getFeatures(State s) {
-		int[] features = new int[NUM_FEATURES];
+	private double[] getFeatures(State s) {
+		double[] features = new double[NUM_FEATURES];
 		// First feature is always 1
+		features[0] = 1.0 / ( adjacentHeightDifferenceSquare(s) + 0.1 );	
 
-		features[0] = 1;	
+		features[1] = 1.0 / ( averageHeight(s) + 0.1 );	
+
+		features[2] = 1.0 / ( getMaxHeight(s) + 0.1 );	
+
+		features[3] = ( compactness(s) + 0.1 );	
+
+		features[4] = ( percent_area_below_max_height(s) + 0.1 );	
+
+		return features;
+	}
+	
+	private double adjacentHeightDifferenceSquare(State s){
+		
+		double sum = 0.0;
 		
 		int[] colHeights = s.getTop();
 		
 		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i=1; i<=colHeights.length; i++) {
-			features[i] = colHeights[i-1];
-			
+		for (int i = 0; i < colHeights.length - 1; i++) {
+			sum = sum + Math.pow(colHeights[i] - colHeights[i + 1], 2);
 		}
-		
-		// Features indexed 11 to 19 are absolute difference between adjacent col heights
-		int j = 11;
-		for (int i=1; i<=colHeights.length-1; i++) {
-
-			features[j] = Math.abs(colHeights[i] - colHeights[i-1]);
-			j++;
-			
-		}
-		
-		// Feature 20 is maximum column height
-		features[20] = getMaxHeight(colHeights);
-		
-		// Feature 21 is number of holes in wall 
-
-		features[21] = getNumHoles(s);
-
-		
-		// Feature 22 is square of diff in adjacent heights
-		features[22] = adjacentHeightDifferenceSquare(s);
-		
-		return features;
+				
+		return sum;
 	}
 	
-	private int getMaxHeight(int[] colHeights) {
+	private double percent_area_below_max_height(State s){
+		int[][] field = s.getField();
+		
+		int max_height = getMaxHeight(s);
+				
+		int count = 0;
+		
+		for (int i=0; i<field.length; i++) {
+			for (int j=0; j<field[0].length; j++) {
+				if (field[i][j] != 0) {
+					count++;
+				}
+			}
+		}
+		
+		return ( count / (getMaxHeight(s) * 10.0) );
+	}
+	
+	private double averageHeight(State s){
+		
+		double sum = 0.0;
+		
+		int[] colHeights = s.getTop();
+		
+		// Features indexed 1 to 10 are 10 column heights of wall
+		for (int i = 0; i < colHeights.length; i++) {
+			sum = sum + colHeights[i];
+		}
+				
+		return (sum / 10.0);
+	}
+	
+	
+	private double compactness(State s){
+		int[][] field = s.getField();
+		
+		int[] colHeights = s.getTop();
+		
+		double sum = 0.0; // sum the area occupied by the blocks
+		
+		// Features indexed 1 to 10 are 10 column heights of wall
+		for (int i = 0; i < colHeights.length; i++) {
+			sum = sum + colHeights[i];
+		}
+						
+		int count = 0;
+		
+		for (int i=0; i<field.length; i++) {
+			for (int j=0; j<field[0].length; j++) {
+				if (field[i][j] != 0) {
+					count++;
+				}
+			}
+		}
+				
+		return ( count / (sum) );
+	}
+	
+	private int getMaxHeight(State s) {
+		
+		int[] colHeights = s.getTop();
+		
 		int max = -1;
 		
 		for (int i=0; i<colHeights.length; i++) {
@@ -320,7 +413,7 @@ public class PlayerSkeleton {
 	 * @param features
 	 * @return Value of current board, i.e. summation of weights * features
 	 */
-	private static double getValueFunction(int[] features) {
+	private static double getValueFunction(double[] features) {
 		double value = 0.0;
 		
 		for (int i=0; i<weights.length; i++) {
@@ -328,22 +421,6 @@ public class PlayerSkeleton {
 		}
 		
 		return value;
-	}
-	
-	private int adjacentHeightDifferenceSquare(State s){
-		
-		int sum = 0;
-		
-		int[] colHeights = s.getTop();
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length - 1; i++) {
-			sum = sum + (int) Math.pow(colHeights[i] - colHeights[i + 1], 2);
-		}
-		
-		sum = (int) Math.pow(sum, 0.5);
-		
-		return sum;
 	}
 	
     //================================================================================
@@ -372,18 +449,25 @@ public class PlayerSkeleton {
     // Helper Methods for Picking Move with Neural Network
     //================================================================================
 	
-	private double getValueFunctionNeural(int[] features) {
+	private double getValueFunctionNeural(double[] features) {
 		double value = 0.0;
 		
+		/*
 		double hiddenNodeVal = calculateWeightedSum(features);
 		double sigmoidSum = calculateSigmoid(hiddenNodeVal);
 		
 		value = calculateSigmoid(sigmoidSum * hiddenNodeWeight);
+		*/
+		value = features[0];
+		value += features[1];
+		value += features[2];
+		value += features[3];
+		value += features[4];
 		
 		return value;
 	}
 
-	private double calculateWeightedSum(int[] features) {
+	private double calculateWeightedSum(double[] features) {
 		double sum = 0.0;
 		
 		for (int i=0; i<weights.length; i++) {
