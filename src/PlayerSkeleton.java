@@ -4,10 +4,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Random;
 
 public class PlayerSkeleton {
-	private static final int TIMES_TO_TRAIN = 30;	
+	private static final int TIMES_TO_TRAIN = 3;	
 	private static final int NUM_FEATURES = 5;
 	private static final double LEARNING_RATE = 0.1;
 	private static final String WEIGHTS_FILE = "weights.txt";
@@ -29,11 +30,10 @@ public class PlayerSkeleton {
 	public static void main(String[] args) {
 		initialiseWeights();
 		PlayerSkeleton p = new PlayerSkeleton();
-		isNeural = true;
 		
 		for (int i=0; i<TIMES_TO_TRAIN; i++) {
 			State s = new State();
-			new TFrame(s);
+			TFrame frame = new TFrame(s);
 			while(!s.hasLost()) {
 				if (isNeural) {
 					s.makeMove(p.pickMoveNeuralNet(s,s.legalMoves()));
@@ -45,12 +45,13 @@ public class PlayerSkeleton {
 				s.drawNext(0,0);
 				
 				try {
-					//Thread.sleep(300);
-					Thread.sleep(5);
+					Thread.sleep(300);
+					//Thread.sleep(5);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 			}
+			frame.dispose();
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
 		}
 				
@@ -64,7 +65,15 @@ public class PlayerSkeleton {
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(WEIGHTS_FILE));
 			
-			String line = null;
+			// new code
+			String line = br.readLine();
+			int i = 0;
+			while (line != null) {
+				weights[i] = Double.parseDouble(line.trim());
+				i++;
+				line = br.readLine();
+			}
+			/* code was wrong. can delete
 			while ((line = br.readLine()) != null) {
 				for (int i=0; i<weights.length; i++) {
 					weights[i] = Double.parseDouble(line.trim());
@@ -74,7 +83,7 @@ public class PlayerSkeleton {
 				if (isNeural) {
 					hiddenNodeWeight = Double.parseDouble(line.trim());
 				}
-			}
+			}*/
 			
 			br.close();
 		} catch (IOException e) {
@@ -101,13 +110,17 @@ public class PlayerSkeleton {
 		int move = 0;
 		
 		curFeatures = getFeatures(s);
+		System.out.println("getting current value");
 		curValue = getValueFunction(curFeatures);
 		
 		move = getMoveWithMaxUtility(s, legalMoves);
+		System.out.println("chosen move " + move);
 		
+		System.out.println("getting output value");
 		outputValue = getValueFunction(moveFeatures);
 		updateWeights(curValue, outputValue);
-
+		
+		sleepThread(2000);
 		return move;
 	}
 	
@@ -201,7 +214,7 @@ public class PlayerSkeleton {
 		}
 						
 		// No valid move, play a random move
-		// TODO: search further down the tree
+		// search further down the tree if we have time
 		if (moveIndex < 0) {
 			moveIndex = getRandomInteger(legalMoves.length);
 		}
@@ -226,7 +239,11 @@ public class PlayerSkeleton {
 	 */
 	private void updateWeights(double curValue, double moveValue) {
 		double targetMinusObj = moveValue - curValue;
+		System.out.println("move val " + moveValue);
+		System.out.println("current val " + curValue);
+		System.out.println("move - cur " + targetMinusObj);
 		double[] changeInWeights = calculateChangeInWeights(targetMinusObj);
+		System.out.println(Arrays.toString(changeInWeights));
 		
 		updateIndividualWeights(changeInWeights);
 	}
@@ -243,15 +260,17 @@ public class PlayerSkeleton {
 	 */
 	private double[] getFeatures(State s) {
 		double[] features = new double[NUM_FEATURES];
-		// First feature is always 1
+		// First feature is always 1 <-- is this still valid?
 		features[0] = 1.0 / ( adjacentHeightDifferenceSquare(s) + 0.1 );	
 
 		features[1] = 1.0 / ( averageHeight(s) + 0.1 );	
 
 		features[2] = 1.0 / ( getMaxHeight(s) + 0.1 );	
 
+		// TODO This one returns NaN on an empty board 
 		features[3] = ( compactness(s) + 0.1 );	
 
+		// TODO This one returns NaN on an empty board
 		features[4] = ( percentAreaBelowMaxHeight(s) + 0.1 );	
 
 		return features;
@@ -415,6 +434,9 @@ public class PlayerSkeleton {
 	 * @return Value of current board, i.e. summation of weights * features
 	 */
 	private static double getValueFunction(double[] features) {
+		System.out.println("getting value function");
+		System.out.println("features " + Arrays.toString(features));
+		System.out.println("weights " + Arrays.toString(weights));
 		double value = 0.0;
 		
 		for (int i=0; i<weights.length; i++) {
@@ -453,12 +475,12 @@ public class PlayerSkeleton {
 	private double getValueFunctionNeural(double[] features) {
 		double value = 0.0;
 		
-		/*
+		
 		double hiddenNodeVal = calculateWeightedSum(features);
 		double sigmoidSum = calculateSigmoid(hiddenNodeVal);
 		
 		value = calculateSigmoid(sigmoidSum * hiddenNodeWeight);
-		*/
+		
 		value = features[0];
 		value += features[1];
 		value += features[2];
@@ -541,5 +563,14 @@ public class PlayerSkeleton {
 	private static int getRandomInteger(int max) {
 		Random rand = new Random();
 		return rand.nextInt(max);
+	}
+	
+	private void sleepThread(int n) {
+		try {
+			Thread.sleep(n);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return;
+		}
 	}
 }
