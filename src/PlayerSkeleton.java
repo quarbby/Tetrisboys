@@ -141,7 +141,7 @@ public class PlayerSkeleton {
 		int reward = 0;
 		int moveIndex = -1;
 		
-		int max_row = 0;
+		int maxRow = 0;
 		
 		for (int i=0; i<legalMoves.length; i++) {
 			State s = cloneCurState(curState);
@@ -160,38 +160,38 @@ public class PlayerSkeleton {
 			
 			int[][][] allLegalMoves = original.allLegalMoves();
 			
-			int[][] s_field = s.getField();
-			int s_nextPiece = s.getNextPiece();
-			int s_top[] = s.getTop();	
-			int s_turn = s.getTurnNumber();
+			int[][] sField = s.getField();
+			//int s_nextPiece = s.getNextPiece();
+			int sTop[] = s.getTop();	
+			int sTurn = s.getTurnNumber();
 
-			int next_reward = 0;
+			int nextReward = 0;
 
 			for (int j = 0; j < 7; j++){
 				for (int o = 0; o < allLegalMoves[j].length; o++){
 
-					NewState second_state = new NewState(s_field, j, s_top, s_turn);
+					NewState secondState = new NewState(sField, j, sTop, sTurn);
 					
-					second_state.newMove(o);	
+					secondState.newMove(o);	
 					
-					if (next_reward < second_state.getRowsCleared()){
-						next_reward = second_state.getRowsCleared();
+					if (nextReward < secondState.getRowsCleared()){
+						nextReward = secondState.getRowsCleared();
 					}
 				}
 			}	
 			
 			double utility = moveValue;
 			
-			reward = reward + next_reward;
+			reward = reward + nextReward;
 						
 			// Find the move with highest utility
 
-			if (reward > max_row){
-				max_row = reward;
+			if (reward > maxRow){
+				maxRow = reward;
 				moveIndex = i;
 				maxUtility = utility;
 				
-			} else if (max_row == reward) {
+			} else if (maxRow == reward) {
 				if (utility > maxUtility) {
 					moveIndex = i;
 					moveFeatures = features;
@@ -252,7 +252,7 @@ public class PlayerSkeleton {
 
 		features[3] = ( compactness(s) + 0.1 );	
 
-		features[4] = ( percent_area_below_max_height(s) + 0.1 );	
+		features[4] = ( percentAreaBelowMaxHeight(s) + 0.1 );	
 
 		return features;
 	}
@@ -271,10 +271,10 @@ public class PlayerSkeleton {
 		return sum;
 	}
 	
-	private double percent_area_below_max_height(State s){
+	private double percentAreaBelowMaxHeight(State s){
 		int[][] field = s.getField();
 		
-		int max_height = getMaxHeight(s);
+		int maxHeight = getMaxHeight(s);
 				
 		int count = 0;
 		
@@ -286,7 +286,7 @@ public class PlayerSkeleton {
 			}
 		}
 		
-		return ( count / (getMaxHeight(s) * 10.0) );
+		return ( count / (maxHeight * 10.0) );
 	}
 	
 	private double averageHeight(State s){
@@ -377,7 +377,7 @@ public class PlayerSkeleton {
 			count++;
 		}
 		
-		if (i-1 < 0 || j+1 >= s.COLS || field[i-1][j+1] == 1) {
+		if (i-1 < 0 || j+1 >= State.COLS || field[i-1][j+1] == 1) {
 			count++;
 		}
 		
@@ -385,19 +385,19 @@ public class PlayerSkeleton {
 			count++;
 		}
 		
-		if (j+1 >= s.COLS || field[i][j+1] == 1) {
+		if (j+1 >= State.COLS || field[i][j+1] == 1) {
 			count++;
 		}
 		
-		if (i+1 >= s.ROWS || j+1 >= s.COLS || field[i+1][j+1] == 1) {
+		if (i+1 >= State.ROWS || j+1 >= State.COLS || field[i+1][j+1] == 1) {
 			count++;
 		}
 		
-		if (i+1 >= s.ROWS || field[i+1][j] == 1) {
+		if (i+1 >= State.ROWS || field[i+1][j] == 1) {
 			count++;
 		}
 		
-		if (i+1 >= s.ROWS || j+1 >= s.COLS || field[i+1][j+1] == 1) {
+		if (i+1 >= State.ROWS || j+1 >= State.COLS || field[i+1][j+1] == 1) {
 			count++;
 		}
 		
