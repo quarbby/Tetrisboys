@@ -9,11 +9,12 @@ import java.util.Random;
 
 public class PlayerSkeleton {
 	private static final int TIMES_TO_TRAIN = 3;	
-	private static final int NUM_FEATURES = 5;
-	private static final double LEARNING_RATE = 0.1;
+	private static final int NUM_FEATURES = 4;
+	private static final int NUM_WEIGHTS = 5;
+	private static final double LEARNING_RATE = 0.01;
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
-	private static double[] weights = new double[NUM_FEATURES];
+	private static double[] weights = new double[NUM_WEIGHTS];
 	private static double hiddenNodeWeight = 0.3;
 	
 	private static double curValue = 0.0;
@@ -31,7 +32,7 @@ public class PlayerSkeleton {
 		initialiseWeights();
 		PlayerSkeleton p = new PlayerSkeleton();
 		
-		for (int i=0; i<TIMES_TO_TRAIN; i++) {
+		for (int i = 0; i < TIMES_TO_TRAIN; i++) {
 			State s = new State();
 			TFrame frame = new TFrame(s);
 			while(!s.hasLost()) {
@@ -44,7 +45,7 @@ public class PlayerSkeleton {
 				s.draw();
 				s.drawNext(0,0);
 				
-				sleepThread(2000);
+				sleepThread(000);
 			}
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
 			sleepThread(2000);
@@ -119,7 +120,12 @@ public class PlayerSkeleton {
 		System.out.println("value after move = "
 				+ outputValue);
 		
+		System.out.println("weights before update = "
+				+ Arrays.toString(weights));
+		
 		updateWeights(curValue, outputValue);
+		System.out.println("weights after update = "
+				+ Arrays.toString(weights));
 		System.out.println("\n");
 		
 		return move;
@@ -156,10 +162,10 @@ public class PlayerSkeleton {
 		// this algo only looks at the current state.
 		
 		// the best move, decided after the algo runs.
-		int bestMove = 0;
+		int bestMove = -1;
 		
 		// the utility value that determines which is the best move
-		double maxUtility = Integer.MIN_VALUE;
+		double maxUtility = -1.0 * Double.MAX_VALUE;
 		
 		// iterate through all the legal moves and play each one
 		for (int i = 0; i < legalMoves.length; i++) {
@@ -186,10 +192,11 @@ public class PlayerSkeleton {
 
 			// choose this move if it's the highest utility
 			if (utility > maxUtility) {
-				bestMove = i;
-				moveFeatures = features;
 				maxUtility = utility;
+				bestMove = i;
+				moveFeatures = Arrays.copyOf(features, features.length);
 			}
+			
 		}
 		
 		return bestMove;
@@ -221,7 +228,9 @@ public class PlayerSkeleton {
 	 */
 	private void updateWeights(double curValue, double moveValue) {
 		double changeInValue = moveValue - curValue;
-		System.out.println("change in value = " + changeInValue);
+		System.out.println("change in value = "
+				+ changeInValue);
+		
 		double[] changeInWeights = calculateChangeInWeights(changeInValue);
 		System.out.println("change in weights = "
 				+ Arrays.toString(changeInWeights));
@@ -262,7 +271,7 @@ public class PlayerSkeleton {
 			weightString = weightString + weights[i] + "\n";
 		}
 		
-		weightString += hiddenNodeWeight;
+		//weightString += hiddenNodeWeight;
 		
 		return weightString;
 	}
@@ -334,19 +343,27 @@ public class PlayerSkeleton {
     // Helper Methods for Update Weights
     //================================================================================
 	
-	private double[] calculateChangeInWeights(double targetMinusObj) {
-		// TODO look at this
+	private double[] calculateChangeInWeights(double changeInValue) {
+		// TODO is this even spoilt???
 		double[] changeInWeights = new double[NUM_FEATURES];
 		
-		for (int i=0; i<changeInWeights.length; i++) {
-			changeInWeights[i] = LEARNING_RATE * targetMinusObj * curFeatures[i];
+		// don't change the weights if our score increases.
+		if (changeInValue > 0) {
+			return changeInWeights;
+		}
+		
+		for (int i = 0; i < changeInWeights.length; i++) {
+			changeInWeights[i] = 
+					LEARNING_RATE 
+					* changeInValue 
+					* moveFeatures[i];
 		}
 		
 		return changeInWeights;
 	}
 	
 	private void updateIndividualWeights(double[] changeInWeights) {
-		for (int i=0; i<weights.length; i++) {
+		for (int i = 0; i < NUM_FEATURES; i++) {
 			weights[i] += changeInWeights[i];
 		}
 	}

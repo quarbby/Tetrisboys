@@ -87,10 +87,10 @@ public class StateFeatureExtractor {
 		int numHoles = 0;
 		int[][] field = s.getField();
 		
-		for (int i=0; i<field.length; i++) {
-			for (int j=0; j<field[0].length; j++) {
-				if (field[i][j] == 0) {
-					if (isHole(s, field, i, j)) {
+		for (int column = 0; column < field.length; column++) {
+			for (int row = 0; row < field[column].length; row++) {
+				if (field[column][row] == 0) {
+					if (isHole(field, column, row)) {
 						numHoles++;
 					}
 				}
@@ -100,47 +100,103 @@ public class StateFeatureExtractor {
 		return numHoles;
 	}
 
-	public boolean isHole(State s, int[][] field, int i, int j) {
-		int count = 0;
+	public boolean isHole(int[][] field, int col, int row) {
+		int minCol = 0;
+		int maxCol = field.length - 1;
+		int minRow = 0;
+		int maxRow = field[col].length - 1;
 		
-		if (i-1 < 0 || j-1 < 0 || field[i-1][j-1] == 1) {
-			count++;
+		int leftCol = col - 1;
+		int rightCol = col + 1;
+		int bottomRow = row - 1;
+		int topRow = row + 1;
+		
+		boolean isBottomMostRow = bottomRow < minRow;
+		boolean isTopMostRow = topRow > maxRow;
+		boolean isLeftMostCol = leftCol < minCol;
+		boolean isRightMostCol = rightCol > maxCol;
+		
+		if (isBottomMostRow) {
+			boolean isAboveFull = field[col][topRow] > 0;
+			if (isLeftMostCol) {
+				// |xxxxxxxxxx|
+				// | xxxxxxxxx|
+				
+				boolean isRightFull = field[rightCol][row] > 0; 
+				return isRightFull && isAboveFull;
+				
+			} else if (isRightMostCol) {
+				// |xxxxxxxxxx|
+				// |xxxxxxxxx |
+				
+				boolean isLeftFull = field[leftCol][row] > 0;
+				return isLeftFull && isAboveFull;
+				
+			} else {
+				// |xxxxxxxxxx|
+				// |xxx xxxxxx|
+				
+				boolean isLeftFull = field[leftCol][row] > 0;
+				boolean isRightFull = field[rightCol][row] > 0;
+				return isLeftFull && isRightFull && isAboveFull;
+			}
+			
+		} else if (isTopMostRow) {
+			boolean isBelowFull = field[col][bottomRow] > 0;
+			
+			if (isLeftMostCol) {
+				// | xxxxxxxxx|
+				// |xxxxxxxxxx|
+				
+				boolean isRightFull = field[rightCol][row] > 0; 
+				return isRightFull && isBelowFull;
+				
+			} else if (isRightMostCol) {
+				// |xxxxxxxxx |
+				// |xxxxxxxxxx|
+				
+				boolean isLeftFull = field[leftCol][row] > 0;
+				return isLeftFull && isBelowFull;
+				
+			} else {
+				// |xxx xxxxxx|
+				// |xxxxxxxxxx|
+				
+				boolean isLeftFull = field[leftCol][row] > 0;
+				boolean isRightFull = field[rightCol][row] > 0;
+				return isLeftFull && isRightFull && isBelowFull;
+			}
+			
+		} else {
+			boolean isAboveFull = field[col][topRow] > 0;
+			boolean isBelowFull = field[col][bottomRow] > 0;
+			
+			if (isLeftMostCol) {
+				// |xxxxxxxxxx|
+				// | xxxxxxxxx|
+				// |xxxxxxxxxx|
+				
+				boolean isRightFull = field[rightCol][row] > 0; 
+				return isRightFull && isBelowFull && isAboveFull;
+				
+			} else if (isRightMostCol) {
+				// |xxxxxxxxxx|
+				// |xxxxxxxxx |
+				// |xxxxxxxxxx|
+				
+				boolean isLeftFull = field[leftCol][row] > 0;
+				return isLeftFull && isBelowFull && isAboveFull;
+				
+			} else {
+				// |xxxxxxxxxx|
+				// |xxx xxxxxx|
+				// |xxxxxxxxxx|
+				
+				boolean isLeftFull = field[leftCol][row] > 0;
+				boolean isRightFull = field[rightCol][row] > 0;
+				return isLeftFull && isRightFull && isBelowFull && isAboveFull;
+			}
 		}
-		
-		if (i-1 < 0 || field[i-1][j] == 1) {
-			count++;
-		}
-		
-		if (i-1 < 0 || j+1 >= State.COLS || field[i-1][j+1] == 1) {
-			count++;
-		}
-		
-		if (j-1 < 0 || field[i][j-1] == 1) {
-			count++;
-		}
-		
-		if (j+1 >= State.COLS || field[i][j+1] == 1) {
-			count++;
-		}
-		
-		if (i+1 >= State.ROWS || j+1 >= State.COLS || field[i+1][j+1] == 1) {
-			count++;
-		}
-		
-		if (i+1 >= State.ROWS || field[i+1][j] == 1) {
-			count++;
-		}
-		
-		if (i+1 >= State.ROWS || j+1 >= State.COLS || field[i+1][j+1] == 1) {
-			count++;
-		}
-		
-		
-		if (count == 8) {
-			return true;
-		}
-		
-		return false;
 	}
 	
 	

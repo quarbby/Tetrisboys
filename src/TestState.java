@@ -1,5 +1,3 @@
-import java.util.*;
-
 public class TestState {
 	public static final int COLS = 10;
 	public static final int ROWS = 21;
@@ -172,7 +170,7 @@ public class TestState {
 	//make a move based on the move index - its order in the legalMoves list
 	public void makeMove(int move) {
 		newMove(legalMoves[nextPiece][move]);
-	}
+	}	
 	
 	//make a move based on an array of orient and slot
 	public void newMove(int[] move) {
