@@ -8,14 +8,13 @@ import java.util.Arrays;
 import java.util.Random;
 
 public class PlayerSkeleton {
-	private static final int TIMES_TO_TRAIN = 3;	
+	private static final int TIMES_TO_TRAIN = 300;	
 	private static final int NUM_FEATURES = 4;
 	private static final int NUM_WEIGHTS = 5;
-	private static final double LEARNING_RATE = 0.01;
+	private static final double LEARNING_RATE = 0.1;
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
 	private static double[] weights = new double[NUM_WEIGHTS];
-	private static double hiddenNodeWeight = 0.3;
 	
 	private static double curValue = 0.0;
 	private static double outputValue = 0.0;
@@ -26,9 +25,10 @@ public class PlayerSkeleton {
 	
 	// Temp var to toggle between neural and gradient descent for now. 
 	// Eventually should switch to neural when it's working
-	private static boolean isNeural = false; 	
+	private static boolean isNeural = true; 	
 	
 	public static void main(String[] args) {
+		int totalRowsCleared = 0;
 		initialiseWeights();
 		PlayerSkeleton p = new PlayerSkeleton();
 		
@@ -37,21 +37,27 @@ public class PlayerSkeleton {
 			TFrame frame = new TFrame(s);
 			while(!s.hasLost()) {
 				if (isNeural) {
-					s.makeMove(p.pickMoveNeuralNet(s,s.legalMoves()));
+					s.makeMove(p.pickMoveNeural(s,s.legalMoves()));
 				} else {
-					s.makeMove(p.pickMove(s,s.legalMoves()));
+					s.makeMove(p.pickMoveNonNeural(s,s.legalMoves()));
 				}
 				
 				s.draw();
 				s.drawNext(0,0);
 				
-				sleepThread(000);
+				// pause for x seconds after a move is played
+				pause(000);
 			}
+			
+			totalRowsCleared += s.getRowsCleared();
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
-			sleepThread(2000);
+			
+			// pause for x seconds after a board is completed
+			pause(000);
 			frame.dispose();
 		}
-				
+		
+		System.out.println(totalRowsCleared);
 		saveWeights();
 	}
 
@@ -77,7 +83,8 @@ public class PlayerSkeleton {
 			generateRandomWeights();
 		}
 		
-		System.out.println(Arrays.toString(weights));
+		System.out.println("loaded weights = "
+				+ Arrays.toString(weights));
 	}
 
 	/**
@@ -95,7 +102,7 @@ public class PlayerSkeleton {
 		}
 	}
 
-	public int pickMove(State s, int[][] legalMoves) {
+	public int pickMoveNonNeural(State s, int[][] legalMoves) {
 		int move = 0;
 		
 		// get the features of the current state
@@ -104,26 +111,31 @@ public class PlayerSkeleton {
 				s, 
 				NUM_FEATURES);
 		curFeatures = extractor.getFeatures();
+		
 		System.out.println("features before move = "
 				+ Arrays.toString(curFeatures));
 		
 		curValue = getWeightedLinearCombination(curFeatures);
+		
 		System.out.println("value before move = "
 				+ curValue);
 		
 		move = getBestMove(s, legalMoves);
+		
 		System.out.println("chosen move = " + move);
 		System.out.println("features after move = "
 				+ Arrays.toString(moveFeatures));
 		
 		outputValue = getWeightedLinearCombination(moveFeatures);
+		
 		System.out.println("value after move = "
 				+ outputValue);
 		
 		System.out.println("weights before update = "
 				+ Arrays.toString(weights));
 		
-		updateWeights(curValue, outputValue);
+		updateWeightsNonNeural(curValue, outputValue);
+		
 		System.out.println("weights after update = "
 				+ Arrays.toString(weights));
 		System.out.println("\n");
@@ -137,16 +149,43 @@ public class PlayerSkeleton {
 	 * @param legalMoves
 	 * @return
 	 */
-	public int pickMoveNeuralNet(State s, int[][] legalMoves) {
+	public int pickMoveNeural(State s, int[][] legalMoves) {
 		int move = 0;
 		
-		StateFeatureExtractor fe = new StateFeatureExtractor(s, NUM_FEATURES);
-		curFeatures = fe.getFeatures();
-		curValue = getValueFunctionNeural(curFeatures);
+		// get the features of the current state
+		StateFeatureExtractor extractor = 
+				new StateFeatureExtractor(
+				s, 
+				NUM_FEATURES);
+		curFeatures = extractor.getFeatures();
+		
+		System.out.println("features before move = "
+				+ Arrays.toString(curFeatures));
+		
+		curValue = getWeightedNeuralCombination(curFeatures);
+		
+		System.out.println("value before move = "
+				+ curValue);
+		
 		move = getBestMove(s, legalMoves);
-		outputValue = getValueFunctionNeural(moveFeatures);
+		
+		System.out.println("chosen move = " + move);
+		System.out.println("features after move = "
+				+ Arrays.toString(moveFeatures));
+		
+		outputValue = getWeightedNeuralCombination(moveFeatures);
+		
+		System.out.println("value after move = "
+				+ outputValue);
+		
+		System.out.println("weights before update = "
+				+ Arrays.toString(weights));
 		
 		updateWeightsNeural();
+		
+		System.out.println("weights after update = "
+				+ Arrays.toString(weights));
+		System.out.println("\n");
 				
 		return move; 
 	}
@@ -185,7 +224,7 @@ public class PlayerSkeleton {
 			// get the utility value of the move
 			double utility = 0.0;
 			if (isNeural) {
-				utility = getValueFunctionNeural(features);
+				utility = getWeightedLinearCombination(features);
 			} else {
 				utility = getWeightedLinearCombination(features);
 			}
@@ -194,7 +233,9 @@ public class PlayerSkeleton {
 			if (utility > maxUtility) {
 				maxUtility = utility;
 				bestMove = i;
-				moveFeatures = Arrays.copyOf(features, features.length);
+				for (int j = 0; j < features.length; j++) {
+					moveFeatures[j] = features[j];
+				}
 			}
 			
 		}
@@ -226,16 +267,18 @@ public class PlayerSkeleton {
 	 * Update weights via gradient descent
 	 * Compares curFeatures to moveFeatures
 	 */
-	private void updateWeights(double curValue, double moveValue) {
+	private void updateWeightsNonNeural(double curValue, double moveValue) {
 		double changeInValue = moveValue - curValue;
+		
 		System.out.println("change in value = "
 				+ changeInValue);
 		
 		double[] changeInWeights = calculateChangeInWeights(changeInValue);
+		
 		System.out.println("change in weights = "
 				+ Arrays.toString(changeInWeights));
 		
-		updateIndividualWeights(changeInWeights);
+		updateFeatureWeights(changeInWeights);
 	}
 
 	
@@ -247,7 +290,7 @@ public class PlayerSkeleton {
 	private double getWeightedLinearCombination(double[] features) {
 		double value = 0.0;
 		
-		for (int i = 0; i < features.length; i++) {
+		for (int i = 0; i < NUM_FEATURES; i++) {
 			value += weights[i] * features[i];
 		}
 		
@@ -259,80 +302,73 @@ public class PlayerSkeleton {
     //================================================================================
 	
 	private static void generateRandomWeights() {
-		for (int i=0; i<weights.length; i++) {
+		for (int i = 0; i < weights.length; i++) {
 			weights[i] = getRandomDouble();
 		}		
 	}
 	
 	private static String getWeightsString() {
+		StringBuilder sb = new StringBuilder();
 		String weightString = "";
 		
-		for (int i=0; i<weights.length; i++) {
+		for (int i = 0; i < weights.length; i++) {
+			sb.append(weights[i]).append("\n");
 			weightString = weightString + weights[i] + "\n";
 		}
 		
-		//weightString += hiddenNodeWeight;
-		
-		return weightString;
+		return sb.toString();
 	}
 	
     //================================================================================
     // Helper Methods for Picking Move with Neural Network
     //================================================================================
 	
-	private double getValueFunctionNeural(double[] features) {
+	private double getWeightedNeuralCombination(double[] features) {
 		double value = 0.0;
 		
+		hiddenNodeValue = getWeightedLinearCombination(features);
+		double sigmoidSum = calculateSigmoid(hiddenNodeValue);
 		
-		double hiddenNodeVal = calculateWeightedSum(features);
-		double sigmoidSum = calculateSigmoid(hiddenNodeVal);
-		
-		value = calculateSigmoid(sigmoidSum * hiddenNodeWeight);
-		
-		value = features[0];
-		value += features[1];
-		value += features[2];
-		value += features[3];
-		value += features[4];
+		value = calculateSigmoid(sigmoidSum * getHiddenNodeWeight());
 		
 		return value;
 	}
-
-	private double calculateWeightedSum(double[] features) {
-		double sum = 0.0;
-		
-		for (int i=0; i<weights.length; i++) {
-			sum += weights[i] * features[i];
-		}
-		
-		return sum;
-	}
 	
 	private double calculateSigmoid(double value) {
-		return 1/(1+Math.pow(Math.E, -value));
+		return 1 / (1 + Math.pow(Math.E, -value));
 	}
 
 	private void updateWeightsNeural() {
-		double deltaOutput = outputValue*(1-outputValue)*(outputValue-curValue);
+		double deltaOutput = outputValue 
+				* (1 - outputValue) 
+				* (outputValue - curValue);
 		updateHiddenNodeWeight(deltaOutput); 
 		
 		//TODO: Check formula for deltaHidden
-		double deltaHidden = hiddenNodeValue*(1-hiddenNodeValue)*(hiddenNodeWeight*deltaOutput);
+		double deltaHidden = hiddenNodeValue 
+				* (1 - hiddenNodeValue) 
+				* (getHiddenNodeWeight() * deltaOutput);
+		
 		double[] changeInWeights = calculateChangeInWeightsNeural(deltaHidden);
-		updateIndividualWeights(changeInWeights);
+		
+		updateFeatureWeights(changeInWeights);
 		
 	}
 
 	private void updateHiddenNodeWeight(double deltaOutput) {
-		double changeInWeight = LEARNING_RATE * deltaOutput * hiddenNodeValue;
-		hiddenNodeWeight = hiddenNodeWeight + changeInWeight;
+		double changeInWeight = LEARNING_RATE 
+				* deltaOutput 
+				* hiddenNodeValue;
+		setHiddenNodeWeight(getHiddenNodeWeight() + changeInWeight);
 	}
 	
 	private double[] calculateChangeInWeightsNeural(double deltaHidden) {
 		double[] changeInWeights = new double[NUM_FEATURES];
 		
-		for (int i=0; i<NUM_FEATURES; i++) {
-			changeInWeights[i] = LEARNING_RATE * deltaHidden * curFeatures[i];
+		for (int i = 0; i < NUM_FEATURES; i++) {
+			changeInWeights[i] = LEARNING_RATE 
+					* deltaHidden 
+					* moveFeatures[i];
 			
 		}
 		
@@ -348,9 +384,9 @@ public class PlayerSkeleton {
 		double[] changeInWeights = new double[NUM_FEATURES];
 		
 		// don't change the weights if our score increases.
-		if (changeInValue > 0) {
+		/*if (changeInValue > 0) {
 			return changeInWeights;
-		}
+		}*/
 		
 		for (int i = 0; i < changeInWeights.length; i++) {
 			changeInWeights[i] = 
@@ -362,7 +398,7 @@ public class PlayerSkeleton {
 		return changeInWeights;
 	}
 	
-	private void updateIndividualWeights(double[] changeInWeights) {
+	private void updateFeatureWeights(double[] changeInWeights) {
 		for (int i = 0; i < NUM_FEATURES; i++) {
 			weights[i] += changeInWeights[i];
 		}
@@ -371,6 +407,14 @@ public class PlayerSkeleton {
     //================================================================================
     // Other General Helper Methods 
     //================================================================================
+	
+	public double getHiddenNodeWeight() {
+		return weights[weights.length - 1];
+	}
+	
+	public void setHiddenNodeWeight(double w) {
+		weights[weights.length - 1] = w;
+	}
 	
 	private static double getRandomDouble() {
 		Random rand = new Random();
@@ -382,7 +426,7 @@ public class PlayerSkeleton {
 		return rand.nextInt(max);
 	}
 	
-	private static void sleepThread(int n) {
+	private static void pause(int n) {
 		try {
 			Thread.sleep(n);
 		} catch (Exception e) {
