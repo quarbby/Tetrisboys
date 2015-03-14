@@ -1,6 +1,6 @@
 import java.util.*;
 
-public class NewState {
+public class TestState {
 	public static final int COLS = 10;
 	public static final int ROWS = 21;
 	public static final int N_PIECES = 7;
@@ -151,7 +151,7 @@ public class NewState {
 	
 	
 	//constructor
-	public NewState() {
+	public TestState() {
 		nextPiece = randomPiece();
 
 	}
@@ -170,7 +170,7 @@ public class NewState {
 	}
 	
 	//make a move based on the move index - its order in the legalMoves list
-	public void newMove(int move) {
+	public void makeMove(int move) {
 		newMove(legalMoves[nextPiece][move]);
 	}
 	
@@ -214,8 +214,6 @@ public class NewState {
 			top[slot+c]=height+pTop[nextPiece][orient][c];
 		}
 		
-		int rowsCleared = 0;
-		
 		//check for full rows - starting at the top
 		for(int r = height+pHeight[nextPiece][orient]-1; r >= height; r--) {
 			//check all columns in the row
@@ -228,7 +226,6 @@ public class NewState {
 			}
 			//if the row was full - remove it and slide above stuff down
 			if(full) {
-				rowsCleared++;
 				cleared++;
 				//for each column
 				for(int c = 0; c < COLS; c++) {
@@ -255,24 +252,32 @@ public class NewState {
 	
 	// extra functions
 	
-	public NewState(int[][] newField, int newNextPiece, int[] newTop, int newTurn) {
+	public TestState(int[][] originalField, 
+			int originalNextPiece, 
+			int[] originalTop, 
+			int originalTurn,
+			int originalCleared) {
 		
-		// http://stackoverflow.com/questions/1564832/how-do-i-do-a-deep-copy-of-a-2d-array-in-java
-		// only way to do a deep copy is to iterate through the array and copy each element
-		for (int i = 0; i < newField.length; i++){
-			for (int j  = 0; j < newField[i].length; j++){
-				this.field[i][j] = newField[i][j];
+		// copy the original field over
+		for (int i = 0; i < originalField.length; i++){
+			for (int j  = 0; j < originalField[i].length; j++){
+				this.field[i][j] = originalField[i][j];
 			}
 		}
 
-		this.nextPiece = newNextPiece;
+		// copy the original next piece over
+		this.nextPiece = originalNextPiece;
 		
-		this.turn = newTurn;
-		
-		for (int i = 0; i < newTop.length; i++){
-			this.top[i] = newTop[i];
+		// copy the original top over
+		for (int i = 0; i < originalTop.length; i++){
+			this.top[i] = originalTop[i];
 		}
+		
+		// copy the original turn number over
+		this.turn = originalTurn;
 
+		// copy the original rows cleared number over
+		this.cleared = originalCleared;
 	}
 	
 	

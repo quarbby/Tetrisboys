@@ -9,7 +9,7 @@ import java.util.Random;
 
 public class PlayerSkeleton {
 	private static final int TIMES_TO_TRAIN = 3;	
-	private static final int NUM_FEATURES = 6;
+	private static final int NUM_FEATURES = 5;
 	private static final double LEARNING_RATE = 0.1;
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
@@ -68,22 +68,14 @@ public class PlayerSkeleton {
 				i++;
 				line = br.readLine();
 			}
-			/* code was wrong. can delete
-			while ((line = br.readLine()) != null) {
-				for (int i=0; i<weights.length; i++) {
-					weights[i] = Double.parseDouble(line.trim());
-				}
-				
-				// Last weight is neural weight if neural
-				if (isNeural) {
-					hiddenNodeWeight = Double.parseDouble(line.trim());
-				}
-			}*/
 			
 			br.close();
+			
 		} catch (IOException e) {
 			generateRandomWeights();
 		}
+		
+		System.out.println(Arrays.toString(weights));
 	}
 
 	/**
@@ -104,18 +96,32 @@ public class PlayerSkeleton {
 	public int pickMove(State s, int[][] legalMoves) {
 		int move = 0;
 		
-		curFeatures = getFeatures(s);
-		System.out.println("getting current value");
-		curValue = getValueFunction(curFeatures);
+		// get the features of the current state
+		StateFeatureExtractor extractor = 
+				new StateFeatureExtractor(
+				s, 
+				NUM_FEATURES);
+		curFeatures = extractor.getFeatures();
+		System.out.println("features before move = "
+				+ Arrays.toString(curFeatures));
 		
-		move = getMoveWithMaxUtility(s, legalMoves);
-		System.out.println("chosen move " + move);
+		curValue = getWeightedLinearCombination(curFeatures);
+		System.out.println("value before move = "
+				+ curValue);
 		
-		System.out.println("getting output value");
-		outputValue = getValueFunction(moveFeatures);
-		updateWeights(curValue, outputValue);
+		move = getBestMove(s, legalMoves);
+		System.out.println("chosen move = " + move);
+		System.out.println("features after move = "
+				+ Arrays.toString(moveFeatures));
 		
-		//sleepThread(300);
+		outputValue = getWeightedLinearCombination(moveFeatures);
+		System.out.println("value after move = "
+				+ outputValue);
+		
+		//updateWeights(curValue, outputValue);
+		System.out.println("\n");
+		
+		//sleepThread(2000);
 		return move;
 	}
 	
@@ -128,9 +134,10 @@ public class PlayerSkeleton {
 	public int pickMoveNeuralNet(State s, int[][] legalMoves) {
 		int move = 0;
 		
-		curFeatures = getFeatures(s);
+		StateFeatureExtractor fe = new StateFeatureExtractor(s, NUM_FEATURES);
+		curFeatures = fe.getFeatures();
 		curValue = getValueFunctionNeural(curFeatures);
-		move = getMoveWithMaxUtility(s, legalMoves);
+		move = getBestMove(s, legalMoves);
 		outputValue = getValueFunctionNeural(moveFeatures);
 		
 		updateWeightsNeural();
@@ -144,88 +151,68 @@ public class PlayerSkeleton {
 	 * @param legalMoves
 	 * @return
 	 */
-	private int getMoveWithMaxUtility(State curState, int[][] legalMoves) {
-		double maxUtility = -1.0;
-		int reward = 0;
-		int moveIndex = -1;
+	private int getBestMove(State curState, int[][] legalMoves) {
+		// the best move is the move with the highest utility.
+		// this algo only looks at the current state.
 		
-		int maxRow = 0;
+		// the best move, decided after the algo runs.
+		int bestMove = 0;
 		
-		for (int i=0; i<legalMoves.length; i++) {
-			State s = cloneCurState(curState);
-			s.makeMove(i);
-			reward = s.getRowsCleared();
+		// the utility value that determines which is the best move
+		double maxUtility = Integer.MIN_VALUE;
+		
+		// iterate through all the legal moves and play each one
+		for (int i = 0; i < legalMoves.length; i++) {
 			
-			double[] features = getFeatures(s);
-			double moveValue = 0.0;
+			// create a test state and play the move on it.
+			TestState testState = makeTestState(curState);
+			testState.makeMove(i);
+			
+			// extract the features of the test state after the move
+			TestStateFeatureExtractor extractor = 
+					new TestStateFeatureExtractor(
+					testState, 
+					NUM_FEATURES, 
+					curState.getRowsCleared());
+			double[] features = extractor.getFeatures();
+			
+			// get the utility value of the move
+			double utility = 0.0;
 			if (isNeural) {
-				moveValue = getValueFunctionNeural(features);
+				utility = getValueFunctionNeural(features);
 			} else {
-				moveValue = getValueFunction(features);
+				utility = getWeightedLinearCombination(features);
 			}
-			
-			NewState original = convertState(s);
-			
-			int[][][] allLegalMoves = original.allLegalMoves();
-			
-			int[][] sField = s.getField();
-			//int s_nextPiece = s.getNextPiece();
-			int sTop[] = s.getTop();	
-			int sTurn = s.getTurnNumber();
 
-			int nextReward = 0;
-
-			for (int j = 0; j < 7; j++){
-				for (int o = 0; o < allLegalMoves[j].length; o++){
-
-					NewState secondState = new NewState(sField, j, sTop, sTurn);
-					
-					secondState.newMove(o);	
-					
-					if (nextReward < secondState.getRowsCleared()){
-						nextReward = secondState.getRowsCleared();
-					}
-				}
-			}	
-			
-			double utility = moveValue;
-			
-			reward = reward + nextReward;
-						
-			// Find the move with highest utility
-
-			if (reward > maxRow){
-				maxRow = reward;
-				moveIndex = i;
+			// choose this move if it's the highest utility
+			if (utility > maxUtility) {
+				bestMove = i;
+				moveFeatures = features;
 				maxUtility = utility;
-				
-			} else if (maxRow == reward) {
-				if (utility > maxUtility) {
-					moveIndex = i;
-					moveFeatures = features;
-					maxUtility = utility;
-				}
 			}
-		}
-						
-		// No valid move, play a random move
-		// search further down the tree if we have time
-		if (moveIndex < 0) {
-			moveIndex = getRandomInteger(legalMoves.length);
 		}
 		
-		return moveIndex;
+		return bestMove;
 	}
-
-
-	private NewState convertState(State curState) {
-		NewState s = new NewState(curState.getField(), curState.getNextPiece(), curState.getTop(), curState.getTurnNumber());
-		return s;
-	}
-
-	private State cloneCurState(State curState) {
-		State s = new State(curState.getField(), curState.getNextPiece(), curState.getTop());
-		return s;
+	
+	private TestState makeTestState(State curState) {
+		
+		// prepare the data to be copied to the test states
+		int[][] originalField = curState.getField();
+		int originalNextPiece = curState.getNextPiece();
+		int originalTop[] = curState.getTop();	
+		int originalTurnNumber = curState.getTurnNumber();
+		int originalRowsCleared = curState.getRowsCleared();
+		
+		// make the test state from the data
+		TestState testState = new TestState(
+				originalField, 
+				originalNextPiece, 
+				originalTop, 
+				originalTurnNumber,
+				originalRowsCleared);
+		
+		return testState;
 	}
 
 	/**
@@ -238,247 +225,21 @@ public class PlayerSkeleton {
 		System.out.println("current val " + curValue);
 		System.out.println("move - cur " + targetMinusObj);
 		double[] changeInWeights = calculateChangeInWeights(targetMinusObj);
-		//System.out.println(Arrays.toString(changeInWeights));
+		System.out.println(Arrays.toString(changeInWeights));
 		
-		//updateIndividualWeights(changeInWeights);
+		updateIndividualWeights(changeInWeights);
 	}
 
-	
-    //================================================================================
-    // Get Features of Board and Helper Methods
-    //================================================================================
-
-	/**
-	 * To get the features as defined in project handout
-	 * @param s
-	 * @return array of features 
-	 */
-	private double[] getFeatures(State s) {
-		double[] features = new double[NUM_FEATURES];
-		// First feature is always 1 <-- is this still valid?
-		
-		// minimise height difference (bumpiness)
-		features[0] = 1/( getBumpiness(s) +0.01);
-
-		// minimise average height
-		features[1] = 1/( averageHeight(s) +0.01);	
-
-		// minimise max height
-		features[2] = 1/( getMaxHeight(s) +0.01);	
-
-		// Maximise compactness
-		features[3] = ( compactness(s) );
-
-		// TODO Do we maximise or minimise this?
-		// minimise area below max height -> we want the wall to be flat
-		features[4] = ( percentAreaBelowMaxHeight(s) );
-		
-		// minimise number of holes
-		features[5] = 1/( getNumHoles(s) +0.01);
-		
-		/*features[0] = getAggregateHeight(s);
-		features[1] = getNumHoles(s);
-		features[2] = getBumpiness(s);*/
-		
-		
-
-		return features;
-	}
-	
-	private double getAggregateHeight(State s) {
-		double aggHeight = 0;
-		
-		for (int i = 0; i < s.getTop().length; i++) {
-			aggHeight += s.getTop()[i];
-		}
-		
-		return aggHeight;
-	}
-
-	private double getBumpiness(State s){
-		
-		double bumpiness = 0.0;
-		
-		int[] colHeights = s.getTop();
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length - 1; i++) {
-			// old method squares the diffs.
-			//sum = sum + Math.pow(colHeights[i] - colHeights[i + 1], 2);
-			
-			// new method doesn't square, but takes the abs value instead
-			bumpiness += Math.abs(colHeights[i] - colHeights[i + 1]);
-		}
-				
-		return bumpiness;
-	}
-	
-	private double percentAreaBelowMaxHeight(State s){
-		double percent = 1;
-		
-		int[][] field = s.getField();
-		
-		int maxHeight = getMaxHeight(s);
-		
-		if (maxHeight == 0) {
-			return percent;
-		}
-				
-		int numBlocks = 0;
-		
-		for (int i=0; i<field.length; i++) {
-			for (int j=0; j<field[0].length; j++) {
-				if (field[i][j] != 0) {
-					numBlocks++;
-				}
-			}
-		}
-		
-		percent = numBlocks / (maxHeight * 10.0);
-		
-		return ( numBlocks / (maxHeight * 10.0) );
-	}
-	
-	private double averageHeight(State s){
-		
-		double sum = 0.0;
-		
-		int[] colHeights = s.getTop();
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length; i++) {
-			sum = sum + colHeights[i];
-		}
-				
-		return (sum / 10.0);
-	}
-	
-	
-	private double compactness(State s){
-		double compactness = 1; // as a percentage
-		
-		int[][] field = s.getField();
-		int[] colHeights = s.getTop();
-		
-		double occupiedArea = 0.0; // sum the area occupied by the blocks
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length; i++) {
-			occupiedArea = occupiedArea + colHeights[i];
-		}
-		
-		// if there is no area, it's already maximum compact.
-		if (occupiedArea <= 0) {
-			return compactness;
-		}
-						
-		int numBlocks = 0;
-		
-		for (int i=0; i<field.length; i++) {
-			for (int j=0; j<field[0].length; j++) {
-				if (field[i][j] != 0) {
-					numBlocks++;
-				}
-			}
-		}
-		
-		compactness = numBlocks / occupiedArea;
-				
-		return compactness;
-	}
-	
-	private int getMaxHeight(State s) {
-		
-		int[] colHeights = s.getTop();
-		
-		int max = 0;
-		
-		for (int i=0; i<colHeights.length; i++) {
-			if (colHeights[i] > max) {
-				max = colHeights[i]; 
-			}
-		}
-		
-		return max;
-	}
-	
-	/**
-	 * Count a hole if all eight around are walls or filled
-	 * @param state
-	 * @return number of holes
-	 */
-	private int getNumHoles(State s) {
-		int numHoles = 0;
-		int[][] field = s.getField();
-		
-		for (int i=0; i<field.length; i++) {
-			for (int j=0; j<field[0].length; j++) {
-				if (field[i][j] == 0) {
-					if (isHole(s, field, i, j)) {
-						numHoles++;
-					}
-				}
-			}
-		}
-		
-		return numHoles;
-	}
-
-	private boolean isHole(State s, int[][] field, int i, int j) {
-		int count = 0;
-		
-		if (i-1 < 0 || j-1 < 0 || field[i-1][j-1] == 1) {
-			count++;
-		}
-		
-		if (i-1 < 0 || field[i-1][j] == 1) {
-			count++;
-		}
-		
-		if (i-1 < 0 || j+1 >= State.COLS || field[i-1][j+1] == 1) {
-			count++;
-		}
-		
-		if (j-1 < 0 || field[i][j-1] == 1) {
-			count++;
-		}
-		
-		if (j+1 >= State.COLS || field[i][j+1] == 1) {
-			count++;
-		}
-		
-		if (i+1 >= State.ROWS || j+1 >= State.COLS || field[i+1][j+1] == 1) {
-			count++;
-		}
-		
-		if (i+1 >= State.ROWS || field[i+1][j] == 1) {
-			count++;
-		}
-		
-		if (i+1 >= State.ROWS || j+1 >= State.COLS || field[i+1][j+1] == 1) {
-			count++;
-		}
-		
-		
-		if (count == 8) {
-			return true;
-		}
-		
-		return false;
-	}
 	
 	/**
 	 * Get the value function
 	 * @param features
 	 * @return Value of current board, i.e. summation of weights * features
 	 */
-	private static double getValueFunction(double[] features) {
-		System.out.println("getting value function");
-		System.out.println("features " + Arrays.toString(features));
-		System.out.println("weights " + Arrays.toString(weights));
+	private double getWeightedLinearCombination(double[] features) {
 		double value = 0.0;
 		
-		for (int i=0; i<weights.length; i++) {
+		for (int i = 0; i < features.length; i++) {
 			value += weights[i] * features[i];
 		}
 		
