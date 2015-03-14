@@ -44,10 +44,11 @@ public class PlayerSkeleton {
 				s.draw();
 				s.drawNext(0,0);
 				
-				sleepThread(100);
+				sleepThread(2000);
 			}
-			frame.dispose();
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
+			sleepThread(2000);
+			frame.dispose();
 		}
 				
 		saveWeights();
@@ -118,10 +119,9 @@ public class PlayerSkeleton {
 		System.out.println("value after move = "
 				+ outputValue);
 		
-		//updateWeights(curValue, outputValue);
+		updateWeights(curValue, outputValue);
 		System.out.println("\n");
 		
-		//sleepThread(2000);
 		return move;
 	}
 	
@@ -220,12 +220,11 @@ public class PlayerSkeleton {
 	 * Compares curFeatures to moveFeatures
 	 */
 	private void updateWeights(double curValue, double moveValue) {
-		double targetMinusObj = moveValue - curValue;
-		System.out.println("move val " + moveValue);
-		System.out.println("current val " + curValue);
-		System.out.println("move - cur " + targetMinusObj);
-		double[] changeInWeights = calculateChangeInWeights(targetMinusObj);
-		System.out.println(Arrays.toString(changeInWeights));
+		double changeInValue = moveValue - curValue;
+		System.out.println("change in value = " + changeInValue);
+		double[] changeInWeights = calculateChangeInWeights(changeInValue);
+		System.out.println("change in weights = "
+				+ Arrays.toString(changeInWeights));
 		
 		updateIndividualWeights(changeInWeights);
 	}
@@ -336,6 +335,7 @@ public class PlayerSkeleton {
     //================================================================================
 	
 	private double[] calculateChangeInWeights(double targetMinusObj) {
+		// TODO look at this
 		double[] changeInWeights = new double[NUM_FEATURES];
 		
 		for (int i=0; i<changeInWeights.length; i++) {
