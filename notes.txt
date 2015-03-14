@@ -1,0 +1,25 @@
+VALUES:
+0.3
+0.3
+0.3
+0.1
+0.3
+0.1
+0.3
+
+LEGEND:
+aggregateHeight = sum(rowHeight) == MIN
+rowsCleared = sum(rowsCleared) == MAX
+holes = sum(holes) == MIN
+bumpiness = sum(abs(rowHeight - nextRowHeight)) == MIN
+
+
+OLD LEGEND:
+bumpinessSquared				- minimise
+averageHeight  					- minimise
+getMaxHeight 					- minimise
+compactness  					- maximise
+percentAreaBelowMaxHeight  		- maximise?
+numHoles						- minimise
+rowsCleared						- maximise
+hiddenNoteWeight				- ???

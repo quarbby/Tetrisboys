@@ -9,7 +9,7 @@ import java.util.Random;
 
 public class PlayerSkeleton {
 	private static final int TIMES_TO_TRAIN = 3;	
-	private static final int NUM_FEATURES = 5;
+	private static final int NUM_FEATURES = 6;
 	private static final double LEARNING_RATE = 0.1;
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
@@ -44,12 +44,7 @@ public class PlayerSkeleton {
 				s.draw();
 				s.drawNext(0,0);
 				
-				try {
-					Thread.sleep(300);
-					//Thread.sleep(5);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+				sleepThread(100);
 			}
 			frame.dispose();
 			System.out.println("You have completed " + s.getRowsCleared() + " rows.");
@@ -68,7 +63,7 @@ public class PlayerSkeleton {
 			// new code
 			String line = br.readLine();
 			int i = 0;
-			while (line != null) {
+			while (line != null && i < weights.length) {
 				weights[i] = Double.parseDouble(line.trim());
 				i++;
 				line = br.readLine();
@@ -120,7 +115,7 @@ public class PlayerSkeleton {
 		outputValue = getValueFunction(moveFeatures);
 		updateWeights(curValue, outputValue);
 		
-		sleepThread(2000);
+		//sleepThread(300);
 		return move;
 	}
 	
@@ -243,9 +238,9 @@ public class PlayerSkeleton {
 		System.out.println("current val " + curValue);
 		System.out.println("move - cur " + targetMinusObj);
 		double[] changeInWeights = calculateChangeInWeights(targetMinusObj);
-		System.out.println(Arrays.toString(changeInWeights));
+		//System.out.println(Arrays.toString(changeInWeights));
 		
-		updateIndividualWeights(changeInWeights);
+		//updateIndividualWeights(changeInWeights);
 	}
 
 	
@@ -261,51 +256,87 @@ public class PlayerSkeleton {
 	private double[] getFeatures(State s) {
 		double[] features = new double[NUM_FEATURES];
 		// First feature is always 1 <-- is this still valid?
-		features[0] = 1.0 / ( adjacentHeightDifferenceSquare(s) + 0.1 );	
+		
+		// minimise height difference (bumpiness)
+		features[0] = 1/( getBumpiness(s) +0.01);
 
-		features[1] = 1.0 / ( averageHeight(s) + 0.1 );	
+		// minimise average height
+		features[1] = 1/( averageHeight(s) +0.01);	
 
-		features[2] = 1.0 / ( getMaxHeight(s) + 0.1 );	
+		// minimise max height
+		features[2] = 1/( getMaxHeight(s) +0.01);	
 
-		// TODO This one returns NaN on an empty board 
-		features[3] = ( compactness(s) + 0.1 );	
+		// Maximise compactness
+		features[3] = ( compactness(s) );
 
-		// TODO This one returns NaN on an empty board
-		features[4] = ( percentAreaBelowMaxHeight(s) + 0.1 );	
+		// TODO Do we maximise or minimise this?
+		// minimise area below max height -> we want the wall to be flat
+		features[4] = ( percentAreaBelowMaxHeight(s) );
+		
+		// minimise number of holes
+		features[5] = 1/( getNumHoles(s) +0.01);
+		
+		/*features[0] = getAggregateHeight(s);
+		features[1] = getNumHoles(s);
+		features[2] = getBumpiness(s);*/
+		
+		
 
 		return features;
 	}
 	
-	private double adjacentHeightDifferenceSquare(State s){
+	private double getAggregateHeight(State s) {
+		double aggHeight = 0;
 		
-		double sum = 0.0;
+		for (int i = 0; i < s.getTop().length; i++) {
+			aggHeight += s.getTop()[i];
+		}
+		
+		return aggHeight;
+	}
+
+	private double getBumpiness(State s){
+		
+		double bumpiness = 0.0;
 		
 		int[] colHeights = s.getTop();
 		
 		// Features indexed 1 to 10 are 10 column heights of wall
 		for (int i = 0; i < colHeights.length - 1; i++) {
-			sum = sum + Math.pow(colHeights[i] - colHeights[i + 1], 2);
+			// old method squares the diffs.
+			//sum = sum + Math.pow(colHeights[i] - colHeights[i + 1], 2);
+			
+			// new method doesn't square, but takes the abs value instead
+			bumpiness += Math.abs(colHeights[i] - colHeights[i + 1]);
 		}
 				
-		return sum;
+		return bumpiness;
 	}
 	
 	private double percentAreaBelowMaxHeight(State s){
+		double percent = 1;
+		
 		int[][] field = s.getField();
 		
 		int maxHeight = getMaxHeight(s);
+		
+		if (maxHeight == 0) {
+			return percent;
+		}
 				
-		int count = 0;
+		int numBlocks = 0;
 		
 		for (int i=0; i<field.length; i++) {
 			for (int j=0; j<field[0].length; j++) {
 				if (field[i][j] != 0) {
-					count++;
+					numBlocks++;
 				}
 			}
 		}
 		
-		return ( count / (maxHeight * 10.0) );
+		percent = numBlocks / (maxHeight * 10.0);
+		
+		return ( numBlocks / (maxHeight * 10.0) );
 	}
 	
 	private double averageHeight(State s){
@@ -324,35 +355,43 @@ public class PlayerSkeleton {
 	
 	
 	private double compactness(State s){
-		int[][] field = s.getField();
+		double compactness = 1; // as a percentage
 		
+		int[][] field = s.getField();
 		int[] colHeights = s.getTop();
 		
-		double sum = 0.0; // sum the area occupied by the blocks
+		double occupiedArea = 0.0; // sum the area occupied by the blocks
 		
 		// Features indexed 1 to 10 are 10 column heights of wall
 		for (int i = 0; i < colHeights.length; i++) {
-			sum = sum + colHeights[i];
+			occupiedArea = occupiedArea + colHeights[i];
+		}
+		
+		// if there is no area, it's already maximum compact.
+		if (occupiedArea <= 0) {
+			return compactness;
 		}
 						
-		int count = 0;
+		int numBlocks = 0;
 		
 		for (int i=0; i<field.length; i++) {
 			for (int j=0; j<field[0].length; j++) {
 				if (field[i][j] != 0) {
-					count++;
+					numBlocks++;
 				}
 			}
 		}
+		
+		compactness = numBlocks / occupiedArea;
 				
-		return ( count / (sum) );
+		return compactness;
 	}
 	
 	private int getMaxHeight(State s) {
 		
 		int[] colHeights = s.getTop();
 		
-		int max = -1;
+		int max = 0;
 		
 		for (int i=0; i<colHeights.length; i++) {
 			if (colHeights[i] > max) {
@@ -565,7 +604,7 @@ public class PlayerSkeleton {
 		return rand.nextInt(max);
 	}
 	
-	private void sleepThread(int n) {
+	private static void sleepThread(int n) {
 		try {
 			Thread.sleep(n);
 		} catch (Exception e) {
