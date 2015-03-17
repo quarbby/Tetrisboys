@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 public class PlayerSkeleton {
-	private static final int TIMES_TO_TRAIN = 300;	
+	private static final int TIMES_TO_TRAIN = 30;	
 	private static final int NUM_FEATURES = 4;
 	private static final int NUM_WEIGHTS = 5;
 	private static final double LEARNING_RATE = 0.1;
@@ -159,33 +159,43 @@ public class PlayerSkeleton {
 				NUM_FEATURES);
 		curFeatures = extractor.getFeatures();
 		
+		/*
 		System.out.println("features before move = "
 				+ Arrays.toString(curFeatures));
+				*/
 		
 		curValue = getWeightedNeuralCombination(curFeatures);
 		
+		/*
 		System.out.println("value before move = "
 				+ curValue);
+		*/
 		
 		move = getBestMove(s, legalMoves);
 		
+		/*
 		System.out.println("chosen move = " + move);
 		System.out.println("features after move = "
 				+ Arrays.toString(moveFeatures));
+		*/
 		
 		outputValue = getWeightedNeuralCombination(moveFeatures);
 		
+		/*
 		System.out.println("value after move = "
 				+ outputValue);
 		
 		System.out.println("weights before update = "
 				+ Arrays.toString(weights));
+				*/
 		
 		updateWeightsNeural();
 		
+		/*
 		System.out.println("weights after update = "
 				+ Arrays.toString(weights));
 		System.out.println("\n");
+		*/
 				
 		return move; 
 	}
@@ -342,17 +352,17 @@ public class PlayerSkeleton {
 		double deltaOutput = outputValue 
 				* (1 - outputValue) 
 				* (outputValue - curValue);
+		//System.out.println("deltaOutput = " + deltaOutput);
 		updateHiddenNodeWeight(deltaOutput); 
 		
 		//TODO: Check formula for deltaHidden
 		double deltaHidden = hiddenNodeValue 
 				* (1 - hiddenNodeValue) 
 				* (getHiddenNodeWeight() * deltaOutput);
-		
+				
 		double[] changeInWeights = calculateChangeInWeightsNeural(deltaHidden);
-		
-		updateFeatureWeights(changeInWeights);
-		
+		updateFeatureWeights(changeInWeights);			
+
 	}
 
 	private void updateHiddenNodeWeight(double deltaOutput) {
@@ -380,13 +390,7 @@ public class PlayerSkeleton {
     //================================================================================
 	
 	private double[] calculateChangeInWeights(double changeInValue) {
-		// TODO is this even spoilt???
 		double[] changeInWeights = new double[NUM_FEATURES];
-		
-		// don't change the weights if our score increases.
-		/*if (changeInValue > 0) {
-			return changeInWeights;
-		}*/
 		
 		for (int i = 0; i < changeInWeights.length; i++) {
 			changeInWeights[i] = 
@@ -400,7 +404,10 @@ public class PlayerSkeleton {
 	
 	private void updateFeatureWeights(double[] changeInWeights) {
 		for (int i = 0; i < NUM_FEATURES; i++) {
-			weights[i] += changeInWeights[i];
+			double newWeight = weights[i] + changeInWeights[i] * i;
+			if (i<3 && newWeight < 0) {
+				weights[i] = newWeight;
+			}
 		}
 	}
 	
