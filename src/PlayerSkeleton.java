@@ -8,10 +8,10 @@ import java.util.Arrays;
 import java.util.Random;
 
 public class PlayerSkeleton {
-	private static final int TIMES_TO_TRAIN = 30;	
+	private static final int TIMES_TO_TRAIN = 10;	
 	private static final int NUM_FEATURES = 4;
 	private static final int NUM_WEIGHTS = 5;
-	private static final double LEARNING_RATE = 0.1;
+	private static final double LEARNING_RATE = 0.5;
 	private static final String WEIGHTS_FILE = "weights.txt";
 	
 	private static double[] weights = new double[NUM_WEIGHTS];
@@ -21,11 +21,7 @@ public class PlayerSkeleton {
 	private static double hiddenNodeValue = 0.3;
 	
 	private static double[] curFeatures = new double[NUM_FEATURES];
-	private static double[] moveFeatures = new double[NUM_FEATURES];
-	
-	// Temp var to toggle between neural and gradient descent for now. 
-	// Eventually should switch to neural when it's working
-	private static boolean isNeural = true; 	
+	private static double[] moveFeatures = new double[NUM_FEATURES];	
 	
 	public static void main(String[] args) {
 		int totalRowsCleared = 0;
@@ -36,11 +32,7 @@ public class PlayerSkeleton {
 			State s = new State();
 			TFrame frame = new TFrame(s);
 			while(!s.hasLost()) {
-				if (isNeural) {
-					s.makeMove(p.pickMoveNeural(s,s.legalMoves()));
-				} else {
-					s.makeMove(p.pickMoveNonNeural(s,s.legalMoves()));
-				}
+				s.makeMove(p.pickMoveNeural(s,s.legalMoves()));
 				
 				s.draw();
 				s.drawNext(0,0);
@@ -100,47 +92,6 @@ public class PlayerSkeleton {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	}
-
-	public int pickMoveNonNeural(State s, int[][] legalMoves) {
-		int move = 0;
-		
-		// get the features of the current state
-		StateFeatureExtractor extractor = 
-				new StateFeatureExtractor(
-				s, 
-				NUM_FEATURES);
-		curFeatures = extractor.getFeatures();
-		
-		System.out.println("features before move = "
-				+ Arrays.toString(curFeatures));
-		
-		curValue = getWeightedLinearCombination(curFeatures);
-		
-		System.out.println("value before move = "
-				+ curValue);
-		
-		move = getBestMove(s, legalMoves);
-		
-		System.out.println("chosen move = " + move);
-		System.out.println("features after move = "
-				+ Arrays.toString(moveFeatures));
-		
-		outputValue = getWeightedLinearCombination(moveFeatures);
-		
-		System.out.println("value after move = "
-				+ outputValue);
-		
-		System.out.println("weights before update = "
-				+ Arrays.toString(weights));
-		
-		updateWeightsNonNeural(curValue, outputValue);
-		
-		System.out.println("weights after update = "
-				+ Arrays.toString(weights));
-		System.out.println("\n");
-		
-		return move;
 	}
 	
 	/**
@@ -233,11 +184,7 @@ public class PlayerSkeleton {
 			
 			// get the utility value of the move
 			double utility = 0.0;
-			if (isNeural) {
-				utility = getWeightedLinearCombination(features);
-			} else {
-				utility = getWeightedLinearCombination(features);
-			}
+			utility = getWeightedLinearCombination(features);
 
 			// choose this move if it's the highest utility
 			if (utility > maxUtility) {
@@ -271,24 +218,6 @@ public class PlayerSkeleton {
 				originalRowsCleared);
 		
 		return testState;
-	}
-
-	/**
-	 * Update weights via gradient descent
-	 * Compares curFeatures to moveFeatures
-	 */
-	private void updateWeightsNonNeural(double curValue, double moveValue) {
-		double changeInValue = moveValue - curValue;
-		
-		System.out.println("change in value = "
-				+ changeInValue);
-		
-		double[] changeInWeights = calculateChangeInWeights(changeInValue);
-		
-		System.out.println("change in weights = "
-				+ Arrays.toString(changeInWeights));
-		
-		updateFeatureWeights(changeInWeights);
 	}
 
 	
@@ -355,7 +284,6 @@ public class PlayerSkeleton {
 		//System.out.println("deltaOutput = " + deltaOutput);
 		updateHiddenNodeWeight(deltaOutput); 
 		
-		//TODO: Check formula for deltaHidden
 		double deltaHidden = hiddenNodeValue 
 				* (1 - hiddenNodeValue) 
 				* (getHiddenNodeWeight() * deltaOutput);
@@ -389,24 +317,17 @@ public class PlayerSkeleton {
     // Helper Methods for Update Weights
     //================================================================================
 	
-	private double[] calculateChangeInWeights(double changeInValue) {
-		double[] changeInWeights = new double[NUM_FEATURES];
-		
-		for (int i = 0; i < changeInWeights.length; i++) {
-			changeInWeights[i] = 
-					LEARNING_RATE 
-					* changeInValue 
-					* moveFeatures[i];
-		}
-		
-		return changeInWeights;
-	}
-	
 	private void updateFeatureWeights(double[] changeInWeights) {
 		for (int i = 0; i < NUM_FEATURES; i++) {
-			double newWeight = weights[i] + changeInWeights[i] * i;
-			if (i<3 && newWeight < 0) {
-				weights[i] = newWeight;
+			double newWeight = weights[i] + changeInWeights[i] * (i+1);
+			if (Math.abs(newWeight) > 0.1 && Math.abs(newWeight) < 1) {
+				if (i<3 && newWeight < 0) {
+					weights[i] = newWeight;
+				} else if (i==3 && newWeight > 0) {
+					weights[i] = newWeight;
+				} else if (i==4 && newWeight < 0) {
+					weights[i] = newWeight;
+				}		
 			}
 		}
 	}
