@@ -202,9 +202,7 @@ public class StateFeatureExtractor {
 	
 	
 	// old methods
-	
 
-	
 	public double percentAreaBelowMaxHeight(){
 		double percent = 1;
 		
