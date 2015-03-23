@@ -1,3 +1,8 @@
+
+
+
+
+
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Container;
@@ -22,6 +27,8 @@ import java.awt.image.DataBuffer;
 
 import javax.swing.*;
 
+
+
 public class TLabel{
 	private static final long serialVersionUID = 1L;
 	
@@ -42,7 +49,6 @@ public class TLabel{
 	public static final Color WHITE      = Color.WHITE;
 	public static final Color YELLOW     = Color.YELLOW;
 	public static final Color NICEGREEN = new Color(0,153,0);
-	
 	// default colors
 	public static final Color DEFAULT_PEN_COLOR   = BLACK;
 	public static final Color DEFAULT_CLEAR_COLOR = WHITE;
@@ -94,6 +100,7 @@ public class TLabel{
 		ymax = max + BORDER * size;
 	}
 
+
 	// helper functions that scale from user coordinates to screen coordinates and back
 	protected double scaleX (double x) { return width  * (x - xmin) / (xmax - xmin); }
 	protected double scaleY (double y) { return height * (ymax - y) / (ymax - ymin); }
@@ -112,6 +119,7 @@ public class TLabel{
 		j.pack();
 		show();
 	}
+	
 	
 	// clear the screen with given color
 	public void clear() { clear(DEFAULT_CLEAR_COLOR); }
@@ -144,6 +152,8 @@ public class TLabel{
 		BasicStroke stroke = new BasicStroke((float) penRadius);
 		offscreen.setStroke(stroke);
 	}
+
+
 
 	// set the pen color
 	public void setPenColor() { setPenColor(DEFAULT_PEN_COLOR); }
@@ -195,7 +205,9 @@ public class TLabel{
 	public void add(Container frame, String spot){
 		frame.add(draw, spot);
 	}
+	
 
+	
 	public void addML(MouseListener frame){
 		draw.addMouseListener(frame);
 	}
@@ -233,6 +245,8 @@ public class TLabel{
 //		System.out.println("drawing a line from " + new Point(x0, y0).toString()+ " to " + new Point(x1,y1).toString());
 		offscreen.draw(new Line2D.Double(scaleX(x0), scaleY(y0), scaleX(x1), scaleY(y1)));
 	}
+
+
 
 	// draw one pixel at (x, y)
 	public void pixel(double x, double y) {
@@ -296,10 +310,13 @@ public class TLabel{
 		else offscreen.draw(new Ellipse2D.Double(xs - ws/2, ys - hs/2, ws, hs));
 	}
 
+
+	
 	public void circle(double x, double y, double r, Color color) {
 		setPenColor(color);
 		circle(x,y,r);
 	}
+	
 	
 	// draw filled circle of radius r, centered on (x, y); degenerate to pixel if small
 	public void filledCircle(double x, double y, double r) {
@@ -310,6 +327,8 @@ public class TLabel{
 		if (ws <= 1 && hs <= 1) pixel(x, y);
 		else offscreen.fill(new Ellipse2D.Double(xs - ws/2, ys - hs/2, ws, hs));
 	}
+
+
 	
 	public void filledCircleP(double x, double y, double r) {
 		double ws = 2*r;
@@ -340,6 +359,7 @@ public class TLabel{
 		else offscreen.fill(new Rectangle2D.Double(xs - ws/2, ys - hs/2, ws, hs));
 	}
 
+
 	//Draw an arrow of the appropriate scale, color, position
 	public void Arrow(double x, double y, double w, double h, double Scale, Color Color) {
 		rectangle(x, y, w, h, Color);
@@ -361,7 +381,9 @@ public class TLabel{
 		offscreen.draw(path);
 	}
 
-	//	draw a polygon with the given (x[i], y[i]) coordinates
+
+
+//	draw a polygon with the given (x[i], y[i]) coordinates
 	public void polygonP(double[] x, double[] y) {
 		int N = x.length;
 		GeneralPath path = new GeneralPath();
@@ -383,7 +405,7 @@ public class TLabel{
 		offscreen.fill(path);
 	}
 
-	//	draw a filled polygon with the given (x[i], y[i]) coordinates
+//	draw a filled polygon with the given (x[i], y[i]) coordinates
 	public void filledPolygonP(double[] x, double[] y) {
 		int N = x.length;
 		GeneralPath path = new GeneralPath();
@@ -457,7 +479,9 @@ public class TLabel{
 		if (Border) polygon(xarray, yarray);
 		setPenColor();
 	}
+	
 
+	
 	// draw picture (gif, jpg, or png) upperLeft on (x, y), rescaled to w-by-h
 	public void image(double x, double y, Image image, double w, double h) {
 
@@ -482,6 +506,8 @@ public class TLabel{
 		offscreen.drawImage(image, (int) Math.round(x),(int) Math.round(y), null);
 		
 	}
+	
+
 
 	//Invert an image
 	public BufferedImage invert(Image image) {
@@ -504,6 +530,9 @@ public class TLabel{
 		}
 		return b2;	  
 	}
+
+
+
 
 	// write the given text string in the current font, center on (x, y)
 	public void text(double x, double y, String s) {
@@ -538,6 +567,7 @@ public class TLabel{
 		setPenColor();
 	}
 
+
 	//Draw text at the appropriate point and color
 	public void text(double x, double y, String s,Color c) {
 		setPenColor(c);
@@ -551,7 +581,7 @@ public class TLabel{
 		setPenColor();
 	}
 
-	//	write the given text string in the current font, center on (x, y) sized to w, h
+//	write the given text string in the current font, center on (x, y) sized to w, h
 	public void text(double x, double y, String s, double w, double h) {
 		offscreen.setFont(font);
 		//FontMetrics metrics = offscreen.getFontMetrics();
@@ -581,6 +611,9 @@ public class TLabel{
 				(int) Math.round(ys + hs), null);
 	}
 	
+	
+
+	
 	// view on-screen, creating new frame if necessary
 	public void show() {
 		onscreen.drawImage(offscreenImage, 0, 0, null);
@@ -593,5 +626,14 @@ public class TLabel{
 		}
 
 	}
+
+	
+
+
+	
+
+	
+	
+
 	
 }
