@@ -13,9 +13,9 @@ public class Trainer {
 
 	ArrayList<Integer> counts = new ArrayList<Integer>();
 
-	int num_of_arms = 5;
+	int num_of_arms = 6;
 
-	int range = 4; // 0 - 2 has 3 numbers
+	int range = 3; // 0 - 2 has 3 numbers
 
 	public Trainer(){
 		
@@ -95,41 +95,31 @@ public class Trainer {
 		}
 		
 		
-			// all tested before
-			
-			double[] ucb_values = new double[counts.size()];
-				
-			for (int i = 0; i < rewards.size(); i++){
-				double bonus = Math.pow((2 * Math.log(total_counts)) / counts.get(i), 0.5);
-				
-				ucb_values[i] = rewards.get(i) + bonus;
-			}			
-			int max_weight = 0;
-		
-			double max_reward = -1.0;
-		
-			for (int o = 0; o < rewards.size(); o++){
-				if (rewards.get(o) > max_reward){
-					max_reward = rewards.get(o);
-					weight = o;
-				}
-			}
-					
-	//System.out.println(weight);
-						
+				double[] ucb_values = new double[counts.size()];
 
-		return weight;
+				for (int i = 0; i < rewards.size(); i++){
+					double bonus = Math.pow((2 * Math.log(total_counts)) / counts.get(i), 0.5);
+
+					ucb_values[i] = rewards.get(i) + bonus;
+				}			
+				int max_weight = 0;
+
+				double max_reward = -1.0;
+
+				for (int o = 0; o < rewards.size(); o++){
+					if (rewards.get(o) > max_reward){
+						max_reward = rewards.get(o);
+						weight = o;
+					}
+				}
+
+
+			return weight;
 	}
 
 	public int pickMove(State old_state, int[][] legalMoves){
-/*
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-*/
-				
+
+
 		NewState original = convertState(old_state);
 		
 		int[][] field = original.getField();
@@ -137,16 +127,13 @@ public class Trainer {
 		int top[] = original.getTop();	
 		int turn = original.getTurnNumber();
 		
-		double max_reward = -1.0;
+		double max_reward = -100000000000000000000.0;
 				
 		int move = 0;		
 
 		int weight = pull_arm();
 		
 		double max_row = 0.0;
-		
-				
-		///		
 		
 		int converted_weight = Integer.parseInt(convert(weight, range));
 
@@ -175,77 +162,32 @@ public class Trainer {
 			s.newMove(i);
 			
 			double row_cleared = s.getRowsCleared();
-						
-			
-			
-			int[][] s_field = s.getField();
-			int s_nextPiece = s.getNextPiece();
-			int s_top[] = s.getTop();	
-			int s_turn = s.getTurnNumber();
 
-			int next_reward = 0;
-
-			for (int j = 0; j < 7; j++){
-				for (int o = 0; o < allLegalMoves[j].length; o++){
-
-					NewState second_state = new NewState(s_field, j, s_top, s_turn);
-					
-					second_state.newMove(o);	
-					
-					if (next_reward < second_state.getRowsCleared()){
-						next_reward = second_state.getRowsCleared();
-					}
-				}
-			}
-			
-			// clearing in future is better
-			// give a smaller weightage
-			row_cleared += (next_reward * 0.5);
-						
-			// avoid having weight with pure 0 value
-			
 			double reward = 0.0;
 			
-			// log it to smooth it out
+			// add 1 because weight starts from 0 => we can be sure that we want to include the weight inside
 			
-			reward += Math.pow(array_weights[0] + 0.1, 2) * ( 1.0 / (adjacentHeightDifferenceSquare(s) + 0.1) );
-			
-			reward += Math.pow(array_weights[1] + 0.1, 2) * (1.0 / (averageHeight(s) + 0.1) );
+			reward += -1.0 * Math.pow(array_weights[0] + 1.0, 2.0) * landingHeight(original, s, row_cleared);
+
+			reward += Math.pow(array_weights[1] + 1.0, 2.0) * row_cleared;
+
+			reward += -1.0 * Math.pow(array_weights[2] + 1.0, 2.0) * rowTransitions(s);
+
+			reward += -1.0 * Math.pow(array_weights[3] + 1.0, 2.0) * colTransitions(s);
+
+			reward += -1.0 * Math.pow(array_weights[4] + 1.0, 2.0) * getNumHoles(s);
+
+			reward += -1.0 * Math.pow(array_weights[5] + 1.0, 2.0) * sum_of_wells(s);
 						
-			reward += Math.pow(array_weights[2] + 0.1, 2) * (1.0 / (getMaxHeight(s) + 0.1) );
-								
-			reward += Math.pow(array_weights[3] + 0.1, 2) * (compactness(s) + 0.1) ;
-				
-			reward += Math.pow(array_weights[4] + 0.1, 2) * (percent_area_below_max_height(s) + 0.1) ;
-							
-			//reward += Math.pow(array_weights[4] + 0.1, 2) * (1.0 / (max_min_diff(s) + 0.1) );
-			
-			//reward += Math.pow(array_weights[5] + 0.1, 2) * (1.0 / (height_diff_from_max(s) + 0.1) );
-			
-			
-			//reward += Math.pow(array_weights[2] + 0.1, 2) * (1.0 / (getNumHoles(s) + 0.1) );
-			
-								
-			if (row_cleared > max_row){
-				// this is a better move as we clear more row
-				
-				max_row = row_cleared * 1.0;
-				
+			if (reward > max_reward){
 				max_reward = reward;
-				
 				move = i;
-				
-			} else if (row_cleared == max_row) {
-				// both clear same number of rows // see which gives a better reward
-				
-				if (reward > max_reward){
-					max_reward = reward;
-					move = i;
-				}			
+				max_row = row_cleared;
 			}
 			
 			// the bigger the reward the better
 		}
+				
 		
 		System.out.println(weight);
 		
@@ -282,204 +224,185 @@ public class Trainer {
 		return move;
 	}
 	
-	
-	private double height_diff_from_max(NewState s){
+	private double landingHeight(NewState original, NewState after, double row_cleared){
+		int[] oldHeights = original.getTop();
+		int[] newHeights = after.getTop();
 		
-		int count = 0;
+		// find the max height difference
 		
-		double sum = 0.0;
-		
-		int[] colHeights = s.getTop();
-		
-		int max_height = getMaxHeight(s);
-		
-		for (int i = 0; i < colHeights.length; i++) {
-			sum = sum + colHeights[i];
-		}
-		
-		//System.out.println((10 * max_height) - sum);
-		
-		
-		return ( (10 * max_height) - sum);
-	}
-	
-	private double averageHeight(NewState s){
-		
-		double sum = 0.0;
-		
-		int[] colHeights = s.getTop();
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length; i++) {
-			sum = sum + colHeights[i];
-		}
 				
-		return (sum / 10.0);
-	}
-	
-	private double adjacentHeightDifferenceSquare(NewState s){
+		int col = 0;
 		
-		double sum = 0.0;
+		double max_diff = 0.0;
 		
-		int[] colHeights = s.getTop();
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length - 1; i++) {
-			sum = sum + Math.pow(colHeights[i] - colHeights[i + 1], 2);
-		}
+		for (int i = 0; i < oldHeights.length; i++){
+			if (newHeights[i] + row_cleared != oldHeights[i]){
+				// compare difference
 				
-		return sum;
+				if (max_diff < newHeights[i] + row_cleared - oldHeights[i]){
+					col = i;
+					max_diff = newHeights[i] + row_cleared - oldHeights[i];
+				}
+				
+			}
+		}
+		
+		return oldHeights[col] + (max_diff / 2.0);
+		
 	}
 	
-	private double percent_area_below_max_height(NewState s){
+	private double rowTransitions(NewState s){
 		int[][] field = s.getField();
 		
-		int max_height = getMaxHeight(s);
-				
-		int count = 0;
 		
-		for (int i=0; i<field.length; i++) {
-			for (int j=0; j<field[0].length; j++) {
-				if (field[i][j] != 0) {
-					count++;
+		// normalize everything to one for easy comparison
+		for (int i = 0; i < field.length; i++){
+			for (int j = 0; j < field[i].length; j++){
+				if (field[i][j] != 0){
+					field[i][j] = 1;
 				}
 			}
 		}
 		
-		if (count == 0){
-			return 1.5; // everything below area // no blocks
-		}		
+		int sum = 0;
 		
-		return ( count / (getMaxHeight(s) * 10.0) );
+		for (int i = 0; i < 20; i++){
+			
+			// wrap around check from the other side
+			
+			int prev = field[i][9];
+			
+			for (int j = 0; j < field[i].length; j++){
+				
+				if (field[i][j] != prev){
+					sum++;
+				}
+				
+				prev = field[i][j];
+			}
+			
+		}
+		
+		return (sum * 1.0);
 	}
 	
-	private double compactness(NewState s){
+	
+	private double colTransitions(NewState s){
 		int[][] field = s.getField();
 		
-		int[] colHeights = s.getTop();
-		
-		double sum = 0.0; // sum the area occupied by the blocks
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length; i++) {
-			sum = sum + colHeights[i];
-		}
-						
-		int count = 0;
-		
-		for (int i=0; i<field.length; i++) {
-			for (int j=0; j<field[0].length; j++) {
-				if (field[i][j] != 0) {
-					count++;
+		// normalize everything to one for easy comparison
+		for (int i = 0; i < field.length; i++){
+			for (int j = 0; j < field[i].length; j++){
+				if (field[i][j] != 0){
+					field[i][j] = 1;
 				}
 			}
 		}
 		
+		int sum = 0;
 		
-		if (count == 0){
-			return 1.5; // everything below area // no blocks
+		// wrap around check from the other side
+		
+		
+		for (int i = 0; i < field[0].length; i++){
+			
+			int prev = 1;
+			
+			for (int j = 0; j < 20; j++){
+				
+				if (field[j][i] != prev){
+					sum++;
+				}
+				
+				prev = field[j][i];
+			}
+
 		}
 		
-						
-		return ( count / (sum) );
+		return (sum * 1.0);
 	}
 	
-	private int getNumHoles(NewState s) {
+	private double sum_of_wells(NewState s){
+
+		int[][] field = s.getField();
+		
+		int[] colHeights = s.getTop();
+		
+		int sum = 0;
+		
+		for (int i = 19; i >= 0; i--){
+				
+			for (int j = 0; j < 10; j++){
+				
+				if (i < colHeights[j]){
+					
+					// do not count blocks below the top block
+					continue;
+				}
+				
+				int left = 1;
+				int right = 1;
+				
+				if (j != 0){
+					left = field[i][j - 1];
+				}
+				
+				if (j != 9){
+					right = field[i][j + 1];
+				}
+								
+				
+				if (left != 0 && right != 0 && field[i][j] == 0){
+					// drill down for more
+					
+					sum++;
+										
+					int counter = i - 1;
+					
+					while (counter >= 0 && field[counter][j] == 0){
+						sum++;
+						counter--;
+					}
+				}
+				
+			}
+			
+		}
+		
+		return (sum * 1.0);
+	}
+	
+	private double getNumHoles(NewState s) {
 		int numHoles = 0;
 		int[][] field = s.getField();
 		
-		// lower holes are worse
-		for (int i=field.length - 1; i>=0; i--) {
-			for (int j=field[0].length - 1; j>=0; j--) {
-				if (field[i][j] == 0) {
-					if (isHole(s, field, i, j)) {
-						numHoles = numHoles + 1;
-					}
-				}
-			}
-		}
+		int[] colHeights = s.getTop();
 		
-		// return numHoles;
-		return 0;
-	}
+		int total = 0;
+		
+		for (int i = 0; i < colHeights.length; i++) {
 
-	private boolean isHole(NewState s, int[][] field, int i, int j) {
-		int count = 0;
-		
-		if (i-1 < 0 || j-1 < 0 || field[i-1][j-1] != 0) {
-			count++;
-		}
-		
-		if (i-1 < 0 || field[i-1][j] != 0) {
-			count++;
-		}
-		
-		if (i-1 < 0 || j+1 >= s.COLS || field[i-1][j+1] != 0) {
-			count++;
-		}
-		
-		if (j-1 < 0 || field[i][j-1] != 0) {
-			count++;
-		}
-		
-		if (j+1 >= s.COLS || field[i][j+1] != 0) {
-			count++;
-		}
-		
-		if (i+1 >= s.ROWS || j+1 >= s.COLS || field[i+1][j+1] != 0) {
-			count++;
-		}
-		
-		if (i+1 >= s.ROWS || field[i+1][j] != 0) {
-			count++;
-		}
-		
-		if (i+1 >= s.ROWS || j+1 >= s.COLS || field[i+1][j+1] != 0) {
-			count++;
-		}
-		
-		
-		if (count == 8) {
-			return true;
-		}
-		
-		return false;
-	}
-	
-	
-	public int getMaxHeight(NewState s){
-		int[] colHeights = s.getTop();
-		
-		int max = -1;
-		
-		for (int i=0; i<colHeights.length; i++) {
-			if (colHeights[i] > max) {
-				max = colHeights[i]; 
-			}
-		}
-		
-		return max;
-	}
-	
-	public int max_min_diff(NewState s){
-		
-		int[] colHeights = s.getTop();
-		
-		int min = 100;
-		int max = -1;
-		
-		for (int i=0; i<colHeights.length; i++) {
-			if (colHeights[i] > max) {
-				max = colHeights[i]; 
+			int count = 0;
+			
+			for (int j = 0; j < colHeights[i]; j++){
+				// check if block at field[i][j] is occupied
+				
+				if (field[j][i] == 0){
+					count++;
+				}
+				
 			}
 			
-			if (colHeights[i] < min) {
-				min = colHeights[i]; 
-			}
+			numHoles = count + numHoles;
+
+			total = total + colHeights[i];
 		}
 		
-		return max-min;
+		return (numHoles * 1.0);
 	}
+	
+	
+
 	
 	public static String convert(int number, int base)
 	{
