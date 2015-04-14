@@ -110,10 +110,10 @@ public class PlayerSkeleton {
 				NUM_FEATURES);
 		curFeatures = extractor.getFeatures();
 		
-		/*
-		System.out.println("features before move = "
-				+ Arrays.toString(curFeatures));
-				*/
+		
+//		System.out.println("features before move = "
+//				+ Arrays.toString(curFeatures));
+				
 		
 		curValue = getWeightedNeuralCombination(curFeatures);
 		
@@ -124,11 +124,11 @@ public class PlayerSkeleton {
 		
 		move = getBestMove(s, legalMoves);
 		
-		/*
-		System.out.println("chosen move = " + move);
+		
+//		System.out.println("chosen move = " + move);
 		System.out.println("features after move = "
 				+ Arrays.toString(moveFeatures));
-		*/
+		
 		
 		outputValue = getWeightedNeuralCombination(moveFeatures);
 		

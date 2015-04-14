@@ -86,13 +86,17 @@ public class StateFeatureExtractor {
 	public int getFeatureNumHoles() {
 		int numHoles = 0;
 		int[][] field = s.getField();
+		boolean isEmptyRow = false;
 		
-		for (int column = 0; column < field.length; column++) {
-			for (int row = 0; row < field[column].length; row++) {
-				if (field[column][row] == 0) {
-					if (isHole(field, column, row)) {
+		for (int row = 0; row < field.length && !isEmptyRow; row++) {
+			isEmptyRow = true;
+			for (int column = 0; column < field[row].length; column++) {
+				if (field[row][column] == 0) {
+					if (isHole(field, row, column)) {
 						numHoles++;
 					}
+				} else {
+					isEmptyRow = false;
 				}
 			}
 		}
@@ -100,108 +104,121 @@ public class StateFeatureExtractor {
 		return numHoles;
 	}
 
-	public boolean isHole(int[][] field, int col, int row) {
-		int minCol = 0;
-		int maxCol = field.length - 1;
-		int minRow = 0;
-		int maxRow = field[col].length - 1;
-		
-		int leftCol = col - 1;
-		int rightCol = col + 1;
-		int bottomRow = row - 1;
-		int topRow = row + 1;
-		
-		boolean isBottomMostRow = bottomRow < minRow;
-		boolean isTopMostRow = topRow > maxRow;
-		boolean isLeftMostCol = leftCol < minCol;
-		boolean isRightMostCol = rightCol > maxCol;
-		
-		if (isBottomMostRow) {
-			boolean isAboveFull = field[col][topRow] > 0;
-			if (isLeftMostCol) {
-				// |xxxxxxxxxx|
-				// | xxxxxxxxx|
-				
-				boolean isRightFull = field[rightCol][row] > 0; 
-				return isRightFull && isAboveFull;
-				
-			} else if (isRightMostCol) {
-				// |xxxxxxxxxx|
-				// |xxxxxxxxx |
-				
-				boolean isLeftFull = field[leftCol][row] > 0;
-				return isLeftFull && isAboveFull;
-				
-			} else {
-				// |xxxxxxxxxx|
-				// |xxx xxxxxx|
-				
-				boolean isLeftFull = field[leftCol][row] > 0;
-				boolean isRightFull = field[rightCol][row] > 0;
-				return isLeftFull && isRightFull && isAboveFull;
-			}
-			
-		} else if (isTopMostRow) {
-			boolean isBelowFull = field[col][bottomRow] > 0;
-			
-			if (isLeftMostCol) {
-				// | xxxxxxxxx|
-				// |xxxxxxxxxx|
-				
-				boolean isRightFull = field[rightCol][row] > 0; 
-				return isRightFull && isBelowFull;
-				
-			} else if (isRightMostCol) {
-				// |xxxxxxxxx |
-				// |xxxxxxxxxx|
-				
-				boolean isLeftFull = field[leftCol][row] > 0;
-				return isLeftFull && isBelowFull;
-				
-			} else {
-				// |xxx xxxxxx|
-				// |xxxxxxxxxx|
-				
-				boolean isLeftFull = field[leftCol][row] > 0;
-				boolean isRightFull = field[rightCol][row] > 0;
-				return isLeftFull && isRightFull && isBelowFull;
-			}
-			
-		} else {
-			boolean isAboveFull = field[col][topRow] > 0;
-			boolean isBelowFull = field[col][bottomRow] > 0;
-			
-			if (isLeftMostCol) {
-				// |xxxxxxxxxx|
-				// | xxxxxxxxx|
-				// |xxxxxxxxxx|
-				
-				boolean isRightFull = field[rightCol][row] > 0; 
-				return isRightFull && isBelowFull && isAboveFull;
-				
-			} else if (isRightMostCol) {
-				// |xxxxxxxxxx|
-				// |xxxxxxxxx |
-				// |xxxxxxxxxx|
-				
-				boolean isLeftFull = field[leftCol][row] > 0;
-				return isLeftFull && isBelowFull && isAboveFull;
-				
-			} else {
-				// |xxxxxxxxxx|
-				// |xxx xxxxxx|
-				// |xxxxxxxxxx|
-				
-				boolean isLeftFull = field[leftCol][row] > 0;
-				boolean isRightFull = field[rightCol][row] > 0;
-				return isLeftFull && isRightFull && isBelowFull && isAboveFull;
-			}
-		}
-	}
+//	public boolean isHole(int[][] field, int col, int row) {
+//		int minCol = 0;
+//		int maxCol = field.length - 1;
+//		int minRow = 0;
+//		int maxRow = field[col].length - 1;
+//		
+//		int leftCol = col - 1;
+//		int rightCol = col + 1;
+//		int bottomRow = row - 1;
+//		int topRow = row + 1;
+//		
+//		boolean isBottomMostRow = bottomRow < minRow;
+//		boolean isTopMostRow = topRow > maxRow;
+//		boolean isLeftMostCol = leftCol < minCol;
+//		boolean isRightMostCol = rightCol > maxCol;
+//		
+//		if (isBottomMostRow) {
+//			boolean isAboveFull = field[col][topRow] > 0;
+//			if (isLeftMostCol) {
+//				// |xxxxxxxxxx|
+//				// | xxxxxxxxx|
+//				
+//				boolean isRightFull = field[rightCol][row] > 0; 
+//				return isRightFull && isAboveFull;
+//				
+//			} else if (isRightMostCol) {
+//				// |xxxxxxxxxx|
+//				// |xxxxxxxxx |
+//				
+//				boolean isLeftFull = field[leftCol][row] > 0;
+//				return isLeftFull && isAboveFull;
+//				
+//			} else {
+//				// |xxxxxxxxxx|
+//				// |xxx xxxxxx|
+//				
+//				boolean isLeftFull = field[leftCol][row] > 0;
+//				boolean isRightFull = field[rightCol][row] > 0;
+//				return isLeftFull && isRightFull && isAboveFull;
+//			}
+//			
+//		} else if (isTopMostRow) {
+//			boolean isBelowFull = field[col][bottomRow] > 0;
+//			
+//			if (isLeftMostCol) {
+//				// | xxxxxxxxx|
+//				// |xxxxxxxxxx|
+//				
+//				boolean isRightFull = field[rightCol][row] > 0; 
+//				return isRightFull && isBelowFull;
+//				
+//			} else if (isRightMostCol) {
+//				// |xxxxxxxxx |
+//				// |xxxxxxxxxx|
+//				
+//				boolean isLeftFull = field[leftCol][row] > 0;
+//				return isLeftFull && isBelowFull;
+//				
+//			} else {
+//				// |xxx xxxxxx|
+//				// |xxxxxxxxxx|
+//				
+//				boolean isLeftFull = field[leftCol][row] > 0;
+//				boolean isRightFull = field[rightCol][row] > 0;
+//				return isLeftFull && isRightFull && isBelowFull;
+//			}
+//			
+//		} else {
+//			boolean isAboveFull = field[col][topRow] > 0;
+//			boolean isBelowFull = field[col][bottomRow] > 0;
+//			
+//			if (isLeftMostCol) {
+//				// |xxxxxxxxxx|
+//				// | xxxxxxxxx|
+//				// |xxxxxxxxxx|
+//				
+//				boolean isRightFull = field[rightCol][row] > 0; 
+//				return isRightFull && isBelowFull && isAboveFull;
+//				
+//			} else if (isRightMostCol) {
+//				// |xxxxxxxxxx|
+//				// |xxxxxxxxx |
+//				// |xxxxxxxxxx|
+//				
+//				boolean isLeftFull = field[leftCol][row] > 0;
+//				return isLeftFull && isBelowFull && isAboveFull;
+//				
+//			} else {
+//				// |xxxxxxxxxx|
+//				// |xxx xxxxxx|
+//				// |xxxxxxxxxx|
+//				
+//				boolean isLeftFull = field[leftCol][row] > 0;
+//				boolean isRightFull = field[rightCol][row] > 0;
+//				return isLeftFull && isRightFull && isBelowFull && isAboveFull;
+//			}
+//		}
+//	}
 	
 	
 	
 	// old methods
+
+	private boolean isHole(int[][] field, int row, int col) {
+		int maxRow = field.length - 1;
+		
+		for(int rowAbove = row + 1; rowAbove < maxRow; rowAbove++) {
+			if(field[rowAbove][col] > 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
 
 	public double percentAreaBelowMaxHeight(){
 		double percent = 1;
