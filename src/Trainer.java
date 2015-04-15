@@ -109,21 +109,14 @@ public class Trainer {
 					}
 				}
 
-		//System.out.println(weight);
-
 
 			return weight;
 	}
-
+	
+	
 	public int pickMove(State old_state, int[][] legalMoves){
-/*
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-*/
-				
+
+
 		NewState original = convertState(old_state);
 		
 		int[][] field = original.getField();
@@ -138,11 +131,6 @@ public class Trainer {
 		int weight = pull_arm();
 		
 		double max_row = 0.0;
-		
-		//System.out.println(weight);
-		
-				
-		///		
 		
 		int converted_weight = Integer.parseInt(convert(weight, range));
 
@@ -173,19 +161,6 @@ public class Trainer {
 			double row_cleared = s.getRowsCleared();
 
 			double reward = 0.0;
-			/*
-			reward += -4.500158825082766 * landingHeight(original, s, row_cleared);
-			
-			reward += 3.4181268101392694 * row_cleared;
-			
-			reward += -3.2178882868487753 * rowTransitions(s);
-			
-			reward += -9.348695305445199 * colTransitions(s);
-			
-			reward += -7.899265427351652 * getNumHoles(s);
-			
-			reward += -3.3855972247263626 * sum_of_wells(s);
-			*/
 			
 			// add 1 because weight starts from 0 => we can be sure that we want to include the weight inside
 			
@@ -200,9 +175,7 @@ public class Trainer {
 			reward += -1.0 * Math.pow(array_weights[4] + 1.0, 2.0) * getNumHoles(s);
 
 			reward += -1.0 * Math.pow(array_weights[5] + 1.0, 2.0) * sum_of_wells(s);
-			
-			// System.out.println(array_weights[0] + "" + array_weights[1] + "" + array_weights[2] + "" + array_weights[3] + "" + array_weights[4] + "" + array_weights[5]);
-			
+						
 			if (reward > max_reward){
 				max_reward = reward;
 				move = i;
@@ -346,27 +319,6 @@ public class Trainer {
 		return (sum * 1.0);
 	}
 	
-	private double totalBlocks(NewState s){
-		
-		int[][] field = s.getField();
-		
-		double sum = 0.0;
-		
-		for (int i = 0; i < field.length; i++) {
-			
-			for (int j = 0; j < field[i].length; j++){
-				
-				if (field[i][j] != 0){
-					sum = sum + 1.0;
-				}
-				
-			}
-			
-		}
-		
-		return sum;
-	}
-	
 	private double sum_of_wells(NewState s){
 
 		int[][] field = s.getField();
@@ -446,141 +398,8 @@ public class Trainer {
 		return (numHoles * 1.0);
 	}
 	
-	private double height_diff_from_max(NewState s){
-		
-		int count = 0;
-		
-		double sum = 0.0;
-		
-		int[] colHeights = s.getTop();
-		
-		int max_height = getMaxHeight(s);
-		
-		for (int i = 0; i < colHeights.length; i++) {
-			sum = sum + colHeights[i];
-		}
-		
-		//System.out.println((10 * max_height) - sum);
-		
-		
-		return ( (10 * max_height) - sum);
-	}
 	
-	private double averageHeight(NewState s){
-		
-		double sum = 0.0;
-		
-		int[] colHeights = s.getTop();
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length; i++) {
-			sum = sum + colHeights[i];
-		}
-				
-		return (sum / 10.0);
-	}
-	
-	private double adjacentHeightDifferenceSquare(NewState s){
-		
-		double sum = 0.0;
-		
-		int[] colHeights = s.getTop();
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length - 1; i++) {
-			sum = sum + Math.pow(colHeights[i] - colHeights[i + 1], 2);
-		}
-				
-		return sum;
-	}
-	
-	private double percent_area_below_max_height(NewState s){
-		int[][] field = s.getField();
-		
-		int max_height = getMaxHeight(s);
-				
-		int count = 0;
-		
-		for (int i=0; i<field.length; i++) {
-			for (int j=0; j<field[0].length; j++) {
-				if (field[i][j] != 0) {
-					count++;
-				}
-			}
-		}
-		
-		if (count == 0){
-			return 1.5; // everything below area // no blocks
-		}		
-		
-		return ( count / (getMaxHeight(s) * 10.0) );
-	}
-	
-	private double compactness(NewState s){
-		int[][] field = s.getField();
-		
-		int[] colHeights = s.getTop();
-		
-		double sum = 0.0; // sum the area occupied by the blocks
-		
-		// Features indexed 1 to 10 are 10 column heights of wall
-		for (int i = 0; i < colHeights.length; i++) {
-			sum = sum + colHeights[i];
-		}
-						
-		int count = 0;
-		
-		for (int i=0; i<field.length; i++) {
-			for (int j=0; j<field[0].length; j++) {
-				if (field[i][j] != 0) {
-					count++;
-				}
-			}
-		}
-		
-		
-		if (count == 0){
-			return 1.5; // everything below area // no blocks
-		}
-		
-						
-		return ( count / (sum) );
-	}
-	
-	
-	public int getMaxHeight(NewState s){
-		int[] colHeights = s.getTop();
-		
-		int max = -1;
-		
-		for (int i=0; i<colHeights.length; i++) {
-			if (colHeights[i] > max) {
-				max = colHeights[i]; 
-			}
-		}
-		
-		return max;
-	}
-	
-	public int max_min_diff(NewState s){
-		
-		int[] colHeights = s.getTop();
-		
-		int min = 100;
-		int max = -1;
-		
-		for (int i=0; i<colHeights.length; i++) {
-			if (colHeights[i] > max) {
-				max = colHeights[i]; 
-			}
-			
-			if (colHeights[i] < min) {
-				min = colHeights[i]; 
-			}
-		}
-		
-		return max-min;
-	}
+
 	
 	public static String convert(int number, int base)
 	{
