@@ -65,13 +65,13 @@ public class Trainer {
 		if (counts.size() != total_num_of_combos){
 			for (int i = 0; i < total_num_of_combos; i++){
 				counts.add(0);
-			}			
+			}
 		}		
 		
 		if (rewards.size() != total_num_of_combos){
 			for (int i = 0; i < total_num_of_combos; i++){
 				rewards.add(0.0);
-			}			
+			}
 		}
 				
 	}
@@ -145,8 +145,8 @@ public class Trainer {
 		for (int i = temp.length() - 1; i >= 0; i--)
 		{
 			
-			
-		    array_weights[num_of_arms - 1 - counter] = temp.charAt(i) - '0';
+			int index = num_of_arms - 1 - counter;
+		    array_weights[index] = temp.charAt(i) - '0';
 			counter++;
 		}
 	
@@ -186,7 +186,7 @@ public class Trainer {
 		}
 				
 		
-		System.out.println(weight);
+		//System.out.println(weight);
 		
 		counts.set(weight, counts.get(weight) + 1);
 				
