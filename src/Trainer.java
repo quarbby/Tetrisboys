@@ -6,117 +6,43 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
-
 public class Trainer {
 
-	ArrayList<Double> rewards = new ArrayList<Double>();
+	CountsAndValues c;
 
-	ArrayList<Integer> counts = new ArrayList<Integer>();
-
-	int num_of_arms = 6;
-
-	int range = 3; // 0 - 2 has 3 numbers
-
-	public Trainer(){
-		
-		int total_num_of_combos = (int) Math.pow(range, num_of_arms);
-		
-		int count = 0;
-		
-		try {
-			BufferedReader br = new BufferedReader(new FileReader("rewards.txt"));
-			
-			String line = null;
-			while ((line = br.readLine()) != null) {
-				
-				rewards.add(Double.parseDouble(line.trim()));
-
-			}
-			
-			br.close();
-		} catch (IOException e) {
-			// init rewards and count		
-			for (int i = 0; i < total_num_of_combos; i++){
-				rewards.add(0.0);
-			}
-
-		}
-		
-		try {
-			BufferedReader br = new BufferedReader(new FileReader("counts.txt"));
-			
-			String line = null;
-			while ((line = br.readLine()) != null) {
-				counts.add(Integer.parseInt(line.trim()));
-
-
-			}
-			
-			br.close();
-		} catch (IOException e) {
-			// init rewards and count		
-
-			for (int i = 0; i < total_num_of_combos; i++){
-				counts.add(0);
-			}
-		}
-		
-			
-		if (counts.size() != total_num_of_combos){
-			for (int i = 0; i < total_num_of_combos; i++){
-				counts.add(0);
-			}
-		}		
-		
-		if (rewards.size() != total_num_of_combos){
-			for (int i = 0; i < total_num_of_combos; i++){
-				rewards.add(0.0);
-			}
-		}
-				
+	public Trainer() {
+		c = CountsAndValues.getInstance();
 	}
 	
 	public int pull_arm(){
 		//  choose an arm to pull
-		
-		double[] probs = new double[counts.size()];
-		
-		int weight = 0; // by default set to size - 1	
-
+		int weight = 0; // by default set to size - 1
 		int total_counts = 0;
 
-		for (int m = 0; m < counts.size(); m++){
-			
-			total_counts = total_counts + counts.get(m);
-			
-			if (counts.get(m) == 0){
+		for (int m = 0; m < c.counts_size(); m++){
+			total_counts = total_counts + c.counts_get(m);
+			if (c.counts_get(m) == 0){
 				return m;
 			}
 		}
+
+		double max_reward = -1.0;
+
+		for (int o = 0; o < c.rewards_size(); o++) {
+			double bonus = Math.pow(
+					(Math.log(total_counts + 1) * 1.0) / Math.log((c.counts_get(o)) + 1), 0.5
+					) * (1.0 / 500);
+			if (c.rewards_get(o) + bonus > max_reward) {
+				max_reward = c.rewards_get(o) + bonus;
+				weight = o;
+			}
+		}
 		
-			
-				int max_weight = 0;
-
-				double max_reward = -1.0;
-
-				for (int o = 0; o < rewards.size(); o++){
-					
-					double bonus = Math.pow((  Math.log(total_counts + 1) * 1.0) / Math.log( (counts.get(o)) + 1), 0.5) * (1.0 / 500);
-										
-					if (rewards.get(o) + bonus > max_reward){
-						max_reward = rewards.get(o) + bonus;
-						weight = o;
-					}
-				}
-
-
-			return weight;
+		return weight;
 	}
 	
 	
 	public int pickMove(State old_state, int[][] legalMoves){
-
-
 		NewState original = convertState(old_state);
 		
 		int[][] field = original.getField();
@@ -125,55 +51,35 @@ public class Trainer {
 		int turn = original.getTurnNumber();
 		
 		double max_reward = -100000000000000000000.0;
-				
-		int move = 0;		
-
+		int move = 0;
 		int weight = pull_arm();
-		
 		double max_row = 0.0;
-		
-		int converted_weight = Integer.parseInt(convert(weight, range));
-
-
-		
-		int[] array_weights = new int[num_of_arms];
+		int converted_weight = Integer.parseInt(convert(weight, c.range));
+		int[] array_weights = new int[c.num_of_arms];
 		
 		String temp = Integer.toString(converted_weight);
 
 		int counter = 0;
 
-		for (int i = temp.length() - 1; i >= 0; i--)
-		{
-			
-			int index = num_of_arms - 1 - counter;
+		for (int i = temp.length() - 1; i >= 0; i--) {
+			int index = c.num_of_arms - 1 - counter;
 		    array_weights[index] = temp.charAt(i) - '0';
 			counter++;
 		}
 	
-		int[][][] allLegalMoves = original.allLegalMoves();
-	
-				
-		for (int i=0; i<legalMoves.length; i++) {		
-		
+		for (int i=0; i<legalMoves.length; i++) {
 			NewState s = new NewState(field, nextPiece, top, turn);
 			s.newMove(i);
-			
 			double row_cleared = s.getRowsCleared();
-
 			double reward = 0.0;
 			
 			// add 1 because weight starts from 0 => we can be sure that we want to include the weight inside
 			
 			reward += -1.0 * Math.pow(array_weights[0] + 1.0, 2.0) * landingHeight(original, s, row_cleared);
-
 			reward += Math.pow(array_weights[1] + 1.0, 2.0) * row_cleared;
-
 			reward += -1.0 * Math.pow(array_weights[2] + 1.0, 2.0) * rowTransitions(s);
-
 			reward += -1.0 * Math.pow(array_weights[3] + 1.0, 2.0) * colTransitions(s);
-
 			reward += -1.0 * Math.pow(array_weights[4] + 1.0, 2.0) * getNumHoles(s);
-
 			reward += -1.0 * Math.pow(array_weights[5] + 1.0, 2.0) * sum_of_wells(s);
 						
 			if (reward > max_reward){
@@ -184,39 +90,11 @@ public class Trainer {
 			
 			// the bigger the reward the better
 		}
-				
 		
-		//System.out.println(weight);
-		
-		counts.set(weight, counts.get(weight) + 1);
-				
-		int n = counts.get(weight);
-				
-		double new_reward = ( (n - 1) / (n * 1.0)) * rewards.get(weight) + (1.0 / n) * (max_row * 1.0);
-		
-		rewards.set(weight, new_reward);
-		
-		
-		String getWriteString = getWriteString(rewards);
-		try{
-			File file = new File("rewards.txt");
-			BufferedWriter output = new BufferedWriter(new FileWriter(file));
-			output.write(getWriteString);
-			output.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		String getWriteAnotherString = getWriteAnotherString(counts);
-		
-		try{
-			File file = new File("counts.txt");
-			BufferedWriter output = new BufferedWriter(new FileWriter(file));
-			output.write(getWriteAnotherString);
-			output.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		c.counts_set(weight, c.counts_get(weight) + 1);
+		int n = c.counts_get(weight);
+		double new_reward = ( (n - 1) / (n * 1.0)) * c.rewards_get(weight) + (1.0 / n) * (max_row * 1.0);
+		c.rewards_set(weight, new_reward);
 		
 		return move;
 	}
@@ -282,8 +160,7 @@ public class Trainer {
 		
 		return (sum * 1.0);
 	}
-	
-	
+
 	private double colTransitions(NewState s){
 		int[][] field = s.getField();
 		
@@ -399,19 +276,13 @@ public class Trainer {
 	}
 	
 	
-
-	
-	public static String convert(int number, int base)
-	{
+	public static String convert(int number, int base) {
 	    int quotient = number / base;
 	    int remainder = number % base;
 
-	    if(quotient == 0) // base case
-	    {
+	    if(quotient == 0) { // base case
 	        return Integer.toString(remainder);      
-	    }
-	    else
-	    {
+	    } else {
 	        return convert(quotient, base) + Integer.toString(remainder);
 	    }            
 	}
@@ -419,27 +290,6 @@ public class Trainer {
 	private NewState convertState(State curState) {
 		NewState s = new NewState(curState.getField(), curState.getNextPiece(), curState.getTop(), curState.getTurnNumber());
 		return s;
-	}
-	
-	
-	private static String getWriteString(ArrayList<Double> arr) {
-		String writeString = "";
-		
-		for (int i=0; i<arr.size(); i++) {
-			writeString = writeString + arr.get(i) + "\n";
-		}
-				
-		return writeString;
-	}
-	
-	private static String getWriteAnotherString(ArrayList<Integer> arr) {
-		String writeString = "";
-		
-		for (int i=0; i<arr.size(); i++) {
-			writeString = writeString + arr.get(i) + "\n";
-		}
-				
-		return writeString;
 	}
 	
 }
