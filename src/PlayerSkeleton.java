@@ -41,23 +41,23 @@ public class PlayerSkeleton implements PlayerListener {
 		if (TRAINING_MODE) {
 			running -= 1;
 			if (running == 0) {
-				System.out.println("save files");
-				CountsAndValues.saveAndExitInstance();
+				//System.out.println("save files");
+				//CountsAndValues.saveAndExitInstance();
 				
 				// when no more running threads,
 				// go to next iteration
 				train();
 			}
 		} else {
-			System.out.println("save files");
-			CountsAndValues.saveAndExitInstance();
+			//System.out.println("save files");
+			//CountsAndValues.saveAndExitInstance();
 		}
 	}
 	
 	public void train() {
 
-		System.out.println("read files");
-		CountsAndValues.getInstance();
+		//System.out.println("read files");
+		//CountsAndValues.getInstance();
 		
 		// training mode on: we train for x times.
 		if (TRAINING_MODE) {
@@ -111,7 +111,7 @@ class Player implements Runnable {
 
 	@Override
 	public void run() {
-		System.out.println("Starting thread " + i);
+		//System.out.println("Starting thread " + i);
 		
 		State s = new State();
 		TFrame t = q ? new TFrame(s) : null;
@@ -128,7 +128,8 @@ class Player implements Runnable {
 			}
 		}
 		
-		System.out.println("Thread " + i + " ended");
+		//System.out.println("Thread " + i + " ended");
+		
 		System.out.println("You have completed "+s.getRowsCleared()+" rows.");
 		
 		if (q) {
@@ -185,7 +186,8 @@ class Trainer {
 		
 		double max_reward = -100000000000000000000.0;
 		int move = 0;
-		int weight = pull_arm();
+		//int weight = pull_arm();
+		int weight = 268;
 		double max_row = 0.0;
 		int converted_weight = Integer.parseInt(convert(weight, c.range));
 		int[] array_weights = new int[c.num_of_arms];
@@ -214,7 +216,7 @@ class Trainer {
 			reward += -1.0 * Math.pow(array_weights[3] + 1.0, 2.0) * colTransitions(s);
 			reward += -1.0 * Math.pow(array_weights[4] + 1.0, 2.0) * getNumHoles(s);
 			reward += -1.0 * Math.pow(array_weights[5] + 1.0, 2.0) * sum_of_wells(s);
-						
+									
 			if (reward > max_reward){
 				max_reward = reward;
 				move = i;
